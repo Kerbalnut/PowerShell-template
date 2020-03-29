@@ -27,4 +27,4 @@ However, alternative options for module-restricted environments should be consid
 
 This demo module will also be unique in that it won't be just the framework of a module, but also include some functions of varying complexity. It will be a "real" module in that sense, where other modules can rely on this module and it's functions. Instructions and examples for including module dependencies should also be practiced.
 
-
+Since this module is dedicated to learning, it should also serve instructions and helper files for setting up a PowerShell instance on new machines, including Profiles, and development tools.
