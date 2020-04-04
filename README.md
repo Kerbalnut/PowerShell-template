@@ -52,3 +52,4 @@ Example functions:
 - PromptForChoice-YesNo (similar to CHOICE from cmd.exe, example of prompting users from a function)
 - Get-ScriptDirectory (return the path of the currently executing script)
 - Backup-Robocopy (simple backup script utilizing robocopy.exe as the copy tool, standard tool in Windows since 7)
+- Clean-RobocopyLog (regex replace to remove percentage signs that clutter robocopy logs)
