@@ -21,7 +21,7 @@ This PowerShell module should be a great example (and good starting framework fo
 - GitHub copy & paste module file
 - GitHub copy & paste a "dot-sourceable" collection of function scripts.
 
-There may be other examples & instructions elsewhere that also explain distributing a PowerShell module. This repo will also function as a live example of doing the distribution to a "Hello World" type practice module. It will also function to help me learn CI/CD development principles, by creating automations for the test/build/deploy processes. Tools like PSScriptAnalyzer, Pester, and Plaster will be used to achieve this. Examples of using such tools are given in the link [PowerShell must-have tools for development](https://bitsofknowledge.net/2018/03/24/powershell-must-have-tools-for-development/) but instead of following each of those examples to practice doing it yourself, this repo seeks to provide working, ready-to-use examples that can easily be dropped in place and edited to suit your needs.
+There may be other examples & instructions elsewhere that also explain distributing a PowerShell module. This repo will also function as a live, working example of doing the distribution to a "Hello World"-type practice module. It will also function to help me personally practice CI/CD development principles, by creating automations for the test/build/deploy processes. Tools like [Invoke-Build](http://duffney.io/GettingStartedWithInvokeBuild), [PSScriptAnalyzer](https://mikefrobbins.com/2015/11/19/using-psscriptanalyzer-to-check-your-powershell-code-for-best-practices/), [Pester](https://devblogs.microsoft.com/scripting/what-is-pester-and-why-should-i-care/), and [Plaster](https://overpoweredshell.com/Working-with-Plaster/) will be used to achieve this. Examples of using such tools are given in the link [PowerShell must-have tools for development](https://bitsofknowledge.net/2018/03/24/powershell-must-have-tools-for-development/) but instead of following each of those examples to practice doing it yourself, this repo seeks to provide working, ready-to-use examples that can easily be dropped in place and edited to suit your needs.
 
 However, alternative options for module-restricted environments should be considered, where a strict security policy prevents online download of such tools. Micro functions to build the module would be useful. A dot-sourceable file with all the functions would help those cases.
 
@@ -32,6 +32,9 @@ This demo module will also be unique in that it won't be just the framework of a
 Module dependencies:
 
 - This module should depend on at least one external module (as an example), but it should be easy to also turn this "dependency" off for testing.
+  - External GitHub repo
+  - PowerShell Gallery hosted module
+  - chocolatey package module
 - Practice in another module, setting this module as a dependency.
 
 Example functions:
