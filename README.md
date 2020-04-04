@@ -25,6 +25,27 @@ There may be other examples & instructions elsewhere that also explain distribut
 
 However, alternative options for module-restricted environments should be considered, where a strict security policy prevents online download of such tools. Micro functions to build the module would be useful. A dot-sourceable file with all the functions would help those cases.
 
+Since this module is dedicated to learning, it should also serve instructions and helper files for setting up a PowerShell instance on new machines, including Profiles, and development tools.
+
 This demo module will also be unique in that it won't be just the framework of a module, but also include some functions of varying complexity. It will be a "real" module in that sense, where other modules can rely on this module and it's functions. Instructions and examples for including module dependencies should also be practiced.
 
-Since this module is dedicated to learning, it should also serve instructions and helper files for setting up a PowerShell instance on new machines, including Profiles, and development tools.
+Module dependencies:
+
+- This module should depend on at least one external module (as an example), but it should be easy to also turn this "dependency" off for testing.
+- Practice in another module, setting this module as a dependency.
+
+Example functions:
+
+- Ping list function, that also does Parallel processing. PowerShell has many different ways to execute commands in parallel, multiple versions of this simple Ping function that has input values and returns results should be made to demonstrate all the ways Parallel Processing can be done:
+  - [Invoke-Parallel](https://github.com/RamblingCookieMonster/Invoke-Parallel), an external function that can be imported and called upon.
+  - [PSParallel](https://github.com/powercode/PSParallel), a PowerShell module utilizing C# to run script blocks in parallel
+  - [ForEach -Parallel](https://docs.microsoft.com/en-us/powershell/module/psworkflow/about/about_foreach-parallel?view=powershell-5.1), which requires [Workflows](https://docs.microsoft.com/en-us/powershell/module/psworkflow/about/about_workflows?view=powershell-5.1) (which also have their own [Parallel](https://docs.microsoft.com/en-us/powershell/module/psworkflow/about/about_parallel?view=powershell-5.1) script blocks) (some [Examples](https://www.petri.com/introduction-to-parallel-powershell-processing))
+  - [ForEach-Object -Parallel](https://devblogs.microsoft.com/powershell/powershell-foreach-object-parallel-feature/)
+  - [Jobs](https://devblogs.microsoft.com/scripting/parallel-processing-with-jobs-in-powershell/)
+  > Side note: Many of these methods are only compatible with a certain range of PowerShell versions. What will make testing this more difficult is the fact that the last version of Windows PowerShell is v5.1, v6 and up is PowerShell Core. Some of these methods are only compatible with v6 or v7, but some are *also* compatible with v5.1 (which uses a completely different source library, .NET Core vs .NET Framework).
+- Since a ping command could be simple, or a bit more complex (maybe we try a DNS look-up, then a PTR aka reverse DNS look-up. Maybe even a WHOIS!) and we're going to be trying multiple methods of utilizing parallel processing, we also need a separate testing structure that can time the execution of each method of ping function, the regular, linear way (for control experiment, of course) and each other parallel processing method we can find. Demo list of ~1000 items should be used, with -Limit option for testing only 50 or 100.
+- Module-building helper cmdlets.
+- Write-HorizontalRule (terminal output formatting function, also for log files probably)
+- PromptForChoice-YesNo (similar to CHOICE from cmd.exe, example of prompting users from a function)
+- Get-ScriptDirectory (return the path of the currently executing script)
+- Backup-Robocopy (simple backup script utilizing robocopy.exe as the copy tool, standard tool in Windows since 7)
