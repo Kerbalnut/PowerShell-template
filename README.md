@@ -50,6 +50,10 @@ Example functions:
   - [Jobs](https://devblogs.microsoft.com/scripting/parallel-processing-with-jobs-in-powershell/)
   > Side note: Many of these methods are only compatible with a certain range of PowerShell versions. What will make testing this more difficult is the fact that the last version of Windows PowerShell is v5.1, v6 and up is PowerShell Core. Some of these methods are only compatible with v6 or v7, but some are *also* compatible with v5.1 (which uses a completely different source library, .NET Core vs .NET Framework).
 - Since a ping command could be simple, or a bit more complex (maybe we try a DNS look-up, then a PTR aka reverse DNS look-up. Maybe even a WHOIS!) and we're going to be trying multiple methods of utilizing parallel processing, we also need a separate testing structure that can time the execution of each method of ping function, the regular, linear way (for control experiment, of course) and each other parallel processing method we can find. Demo list of ~1000 items should be used, with -Limit option for testing only 50 or 100.
+  - Testing suite tools & functions:
+  - Logging of test results per OS version and PowerShell version
+  - Measure commands to log execution time of different methods, and logging of the results
+  - Escalated privilege requirement testing.
 - Module-building helper cmdlets.
 - Write-HorizontalRule (terminal output formatting function, also for log files probably)
 - PromptForChoice-YesNo (similar to CHOICE from cmd.exe, example of prompting users from a function)
@@ -57,3 +61,4 @@ Example functions:
 - Backup-Robocopy (simple backup script utilizing robocopy.exe as the copy tool, standard tool in Windows since 7)
 - Clean-RobocopyLog (regex replace to remove percentage signs that clutter robocopy logs)
 - Find-AndReplace (find-and-replace content in files recursively within directories, and also filenames themselves)
+
