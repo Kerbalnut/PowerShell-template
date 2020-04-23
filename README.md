@@ -72,3 +72,5 @@ Example functions:
 - HTML + CSS Report Publishing examples
 - SQL Query examples (external files .txt .sql, piped-in multi-line variable)
 - Data manipulation concepts (.CSV, .XML, .JSON, .YAML, etc.)
+  - Remove duplicates
+  - Sort functions
