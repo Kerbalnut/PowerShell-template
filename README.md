@@ -66,3 +66,7 @@ Example functions:
 - Setting up & customizing PowerShell IDEs: Notepad++, PowerShell ISE, [VS Code](https://github.com/microsoft/vscode)/[VS Codium](https://github.com/VSCodium/vscodium), [Windows Terminal](https://github.com/microsoft/terminal)
 - Working Experiments with [PS2EXE-GUI: "Convert" PowerShell Scripts to EXE Files with GUI](https://gallery.technet.microsoft.com/scriptcenter/PS2EXE-GUI-Convert-e7cb69d5)
 - ~~Remote Access Examples~~ Better for separate module.
+- Web-scraping examples
+  - Web-authentication examples
+- HTML + CSS Report Publishing examples
+- SQL Query examples (external files .txt .sql, piped-in multi-line variable)
