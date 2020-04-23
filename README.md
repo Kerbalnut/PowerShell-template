@@ -32,9 +32,12 @@ This demo module will also be unique in that it won't be just the framework of a
 Module dependencies:
 
 - This module should depend on at least one external module (as an example), but it should be easy to also turn this "dependency" off for testing.
-  - External GitHub repo
-  - PowerShell Gallery hosted module
-  - chocolatey package module
+  - External module locations:
+    - External GitHub repo
+    - PowerShell Gallery hosted module
+    - chocolatey package module
+  - Possible external modules to depend on:
+    - Logging module, which can produce & consume
 - Practice in another module, setting this module as a dependency.
 
 Example functions:
@@ -53,3 +56,4 @@ Example functions:
 - Get-ScriptDirectory (return the path of the currently executing script)
 - Backup-Robocopy (simple backup script utilizing robocopy.exe as the copy tool, standard tool in Windows since 7)
 - Clean-RobocopyLog (regex replace to remove percentage signs that clutter robocopy logs)
+- Find-AndReplace (find-and-replace content in files recursively within directories, and also filenames themselves)
