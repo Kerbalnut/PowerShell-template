@@ -61,4 +61,8 @@ Example functions:
 - Backup-Robocopy (simple backup script utilizing robocopy.exe as the copy tool, standard tool in Windows since 7)
 - Clean-RobocopyLog (regex replace to remove percentage signs that clutter robocopy logs)
 - Find-AndReplace (find-and-replace content in files recursively within directories, and also filenames themselves)
-
+- Advanced Logic Examples
+- Customizing PowerShell profiles and defualt terminal
+- Setting up & customizing PowerShell IDEs: Notepad++, PowerShell ISE, [VS Code](https://github.com/microsoft/vscode)/[VS Codium](https://github.com/VSCodium/vscodium), [Windows Terminal](https://github.com/microsoft/terminal)
+- Working Experiments with [PS2EXE-GUI: "Convert" PowerShell Scripts to EXE Files with GUI](https://gallery.technet.microsoft.com/scriptcenter/PS2EXE-GUI-Convert-e7cb69d5)
+- ~~Remote Access Examples~~ Better for separate module.
