@@ -38,6 +38,7 @@ Module dependencies:
     - chocolatey package module
   - Possible external modules to depend on:
     - Logging module, which can produce & consume
+    - [Time functions](https://github.com/Kerbalnut/TimeFunctions)
 - Practice in another module, setting this module as a dependency.
 
 Example functions:
