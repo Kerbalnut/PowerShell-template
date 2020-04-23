@@ -71,3 +71,4 @@ Example functions:
   - Web-authentication examples
 - HTML + CSS Report Publishing examples
 - SQL Query examples (external files .txt .sql, piped-in multi-line variable)
+- Data manipulation concepts (.CSV, .XML, .JSON, .YAML, etc.)
