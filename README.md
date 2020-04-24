@@ -62,6 +62,8 @@ Example functions:
 - Backup-Robocopy (simple backup script utilizing robocopy.exe as the copy tool, standard tool in Windows since 7)
 - Clean-RobocopyLog (regex replace to remove percentage signs that clutter robocopy logs)
 - Find-AndReplace (find-and-replace content in files recursively within directories, and also filenames themselves)
+  - Regex capable
+  - separate Find function, that can be used independently
 - Advanced Logic Examples
 - Customizing PowerShell profiles and defualt terminal
 - Setting up & customizing PowerShell IDEs: Notepad++, PowerShell ISE, [VS Code](https://github.com/microsoft/vscode)/[VS Codium](https://github.com/VSCodium/vscodium), [Windows Terminal](https://github.com/microsoft/terminal)
