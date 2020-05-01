@@ -7,6 +7,8 @@ Originally migrated from a separate repo [Batch-Tools-Sysadmin](https://github.c
 
 This repository is currently in a **design and development** phase and should be expected to have big changes per commit.
 
+# Table of Contents:
+
 # Spec
 
 Specification for what this software is, what it should do, what it should not do.
@@ -29,7 +31,7 @@ Since this module is dedicated to learning, it should also serve instructions an
 
 This demo module will also be unique in that it won't be just the framework of a module, but also include some functions of varying complexity. It will be a "real" module in that sense, where other modules can rely on this module and it's functions. Instructions and examples for including module dependencies should also be practiced.
 
-Module dependencies:
+## Module dependencies:
 
 - This module should depend on at least one external module (as an example), but it should be easy to also turn this "dependency" off for testing.
   - External module locations:
@@ -41,7 +43,7 @@ Module dependencies:
     - [Time functions](https://github.com/Kerbalnut/TimeFunctions)
 - Practice in another module, setting this module as a dependency.
 
-Example functions:
+## Example functions:
 
 - Ping list function, that also does Parallel processing. PowerShell has many different ways to execute commands in parallel, multiple versions of this simple Ping function that has input values and returns results should be made to demonstrate all the ways Parallel Processing can be done:
   - [Invoke-Parallel](https://github.com/RamblingCookieMonster/Invoke-Parallel), an external function that can be imported and called upon.
@@ -62,6 +64,8 @@ Example functions:
 - Backup-Robocopy (simple backup script utilizing robocopy.exe as the copy tool, standard tool in Windows since 7)
 - Clean-RobocopyLog (regex replace to remove percentage signs that clutter robocopy logs)
 - Find-AndReplace (find-and-replace content in files recursively within directories, and also filenames themselves)
+  - Regex capable
+  - separate Find function, that can be used independently
 - Advanced Logic Examples
 - Customizing PowerShell profiles and defualt terminal
 - Setting up & customizing PowerShell IDEs: Notepad++, PowerShell ISE, [VS Code](https://github.com/microsoft/vscode)/[VS Codium](https://github.com/VSCodium/vscodium), [Windows Terminal](https://github.com/microsoft/terminal)
