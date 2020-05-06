@@ -52,6 +52,7 @@ This demo module will also be unique in that it won't be just the framework of a
   - [ForEach-Object -Parallel](https://devblogs.microsoft.com/powershell/powershell-foreach-object-parallel-feature/)
   - [Jobs](https://devblogs.microsoft.com/scripting/parallel-processing-with-jobs-in-powershell/)
   > Side note: Many of these methods are only compatible with a certain range of PowerShell versions. What will make testing this more difficult is the fact that the last version of Windows PowerShell is v5.1, v6 and up is PowerShell Core. Some of these methods are only compatible with v6 or v7, but some are *also* compatible with v5.1 (which uses a completely different source library, .NET Core vs .NET Framework).
+    - Test case: piping parallel executing functions together, e.g. Test-Ping | Test-DNSReverseLookup
 - Since a ping command could be simple, or a bit more complex (maybe we try a DNS look-up, then a PTR aka reverse DNS look-up. Maybe even a WHOIS!) and we're going to be trying multiple methods of utilizing parallel processing, we also need a separate testing structure that can time the execution of each method of ping function, the regular, linear way (for control experiment, of course) and each other parallel processing method we can find. Demo list of ~1000 items should be used, with -Limit option for testing only 50 or 100.
   - Testing suite tools & functions:
   - Logging of test results per OS version and PowerShell version
