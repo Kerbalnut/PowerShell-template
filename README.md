@@ -79,3 +79,4 @@ This demo module will also be unique in that it won't be just the framework of a
 - Data manipulation concepts (.CSV, .XML, .JSON, .YAML, etc.)
   - Remove duplicates
   - Sort functions
+- Startup-Script with Scheduled Task example
