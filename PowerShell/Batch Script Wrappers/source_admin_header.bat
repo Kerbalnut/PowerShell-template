@@ -1,7 +1,23 @@
-# 2>NUL & @CLS & PUSHD "%~dp0" & "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy ByPass -Command "Invoke-Expression -Command ([IO.File]::ReadAllText('%~f0'))" & POPD & EXIT /B
+# 2>NUL & @ECHO OFF & @CLS & PUSHD "%~dp0" & ECHO Requesting administrative privileges... waiting 2 seconds & PING -n 3 127.0.0.1 >NUL & SET "_batchFile=%~f0" & SET "_Args=%*" & IF NOT [%_Args%]==[] SET "_Args=%_Args:"=""%" & IF ["%_Args%"] EQU [""] (SET "_CMD_RUN=%_batchFile%") ELSE (SET "_CMD_RUN=""%_batchFile%"" %_Args%") & ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" & ECHO UAC.ShellExecute "CMD", "/C ""%_CMD_RUN%""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" & FSUTIL dirty query %SystemDrive% >NUL && "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy ByPass -Command "Invoke-Expression -Command ([IO.File]::ReadAllText('%~f0'))" || cscript "%Temp%\~ElevateMe.vbs"
+
+# & POPD & EXIT /B 
+
+#Requires -RunAsAdministrator
 
 
 
+# ECHO Requesting administrative privileges... waiting 2 seconds & PING -n 3 127.0.0.1 >NUL & SET "_batchFile=%~f0" & SET "_Args=%*" & IF NOT [%_Args%]==[] SET "_Args=%_Args:"=""%" & IF ["%_Args%"] EQU [""] (SET "_CMD_RUN=%_batchFile%") ELSE (SET "_CMD_RUN=""%_batchFile%"" %_Args%") & ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" & ECHO UAC.ShellExecute "CMD", "/C ""%_CMD_RUN%""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs"
+
+
+
+
+
+
+
+
+
+
+<#
 :: First check if we are running As Admin/Elevated
 FSUTIL dirty query %SystemDrive% >NUL
 IF %ERRORLEVEL% EQU 0 GOTO START
@@ -10,11 +26,14 @@ IF %ERRORLEVEL% EQU 0 GOTO START
 :: commandA && commandB || commandC
 :: If commandA succeeds run commandB, if it fails commandC
 
+
 # 2>NUL & @ECHO OFF & @CLS & FSUTIL dirty query %SystemDrive% >NUL 
 
 && PUSHD "%~dp0" & "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy ByPass -Command "Invoke-Expression -Command ([IO.File]::ReadAllText('%~f0'))" & POPD & EXIT /B
 
 || ECHO Requesting administrative privileges... ^(waiting 2 seconds^) & PING -n 3 127.0.0.1 >NUL & SET "_batchFile=%~f0" & SET "_Args=%*" & IF NOT [%_Args%]==[] SET "_Args=%_Args:"=""%" & IF ["%_Args%"] EQU [""] (SET "_CMD_RUN=%_batchFile%") ELSE (SET "_CMD_RUN=""%_batchFile%"" %_Args%") & ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" & ECHO UAC.ShellExecute "CMD", "/C ""%_CMD_RUN%""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" & cscript "%Temp%\~ElevateMe.vbs" & EXIT /B
+
+#>
 
 
 <#
@@ -52,6 +71,14 @@ Allows %ERRORLEVEL% to be reflected properly.
 Write-Host "`nThis code block was forcefully taken from:`n`nhttps://www.reddit.com/r/PowerShell/comments/gaa2ip/never_write_a_batch_wrapper_again`n`nThere were no injuries.`n" -BackgroundColor Black -ForegroundColor Red
 
 $PSVersionTable.PSVersion
+
+# Check if script is being Run as Administrator or not
+$SessionIsAdminElevated = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+If ($SessionIsAdminElevated) {
+	Write-Host "Session is running as Admin: $SessionIsAdminElevated" -BackgroundColor Black -ForegroundColor Green
+} Else {
+	Write-Host "Session is running as Admin: $SessionIsAdminElevated" -BackgroundColor Red -ForegroundColor White
+}
 
 Write-Host "Pretty colors" -BackgroundColor Red -ForegroundColor Black
 Write-Host "Pretty colors" -BackgroundColor Green -ForegroundColor Blue
