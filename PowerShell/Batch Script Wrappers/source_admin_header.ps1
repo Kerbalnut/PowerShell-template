@@ -1,13 +1,4 @@
-# 2>NUL & @ECHO OFF & @CLS & SETLOCAL EnableDelayedExpansion & SET "_REQUEST_ADMIN=ECHO Requesting administrative privileges... waiting 2 seconds ^& PING -n 3 127.0.0.1 >NUL ^& SET "_batchFile=%~f0" ^& ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" ^& ECHO UAC.ShellExecute "CMD", "/C ""!_batchFile!""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" ^& cscript "%Temp%\~ElevateMe.vbs" ^& EXIT /B" & SET "_RUN_AS_POWERSHELL=PUSHD "%~dp0" ^& "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy ByPass -Command "Invoke-Expression -Command ([IO.File]::ReadAllText('%~f0'))" ^& POPD ^& EXIT /B" & FSUTIL dirty query %SystemDrive% >NUL 2>&1 & IF %ERRORLEVEL% EQU 0 (!_RUN_AS_POWERSHELL!) ELSE (!_REQUEST_ADMIN!)
-
-
-
-# 2>NUL & @ECHO OFF & @CLS & SETLOCAL EnableDelayedExpansion 
-# 2>NUL & SET "_REQUEST_ADMIN=ECHO Requesting administrative privileges... waiting 2 seconds ^& PING -n 3 127.0.0.1 >NUL ^& SET "_batchFile=%~f0" ^& ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" ^& ECHO UAC.ShellExecute "CMD", "/C ""!_batchFile!""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" ^& cscript "%Temp%\~ElevateMe.vbs" ^& EXIT /B"
-# 2>NUL & SET "_RUN_AS_POWERSHELL=PUSHD "%~dp0" ^& "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy ByPass -Command "Invoke-Expression -Command ([IO.File]::ReadAllText('%~f0'))" ^& POPD ^& EXIT /B" 
-# 2>NUL & FSUTIL dirty query %SystemDrive% >NUL
-# 2>NUL & IF %ERRORLEVEL% EQU 0 (!_RUN_AS_POWERSHELL!) ELSE (!_REQUEST_ADMIN!)
-
+# 2>NUL & @ECHO OFF & @CLS & SETLOCAL EnableDelayedExpansion & SET "_REQUEST_ADMIN=ECHO Requesting administrative privileges... waiting 2 seconds ^& PING -n 3 127.0.0.1 >NUL 2>&1 ^& SET "_batchFile=%~f0" ^& SET "_Args=%*" ^& IF NOT [%_Args%]==[] SET "_Args=!_Args:"=""!" ^& IF ["%_Args%"] EQU [""] (SET "_CMD_RUN=!_batchFile!") ELSE (SET "_CMD_RUN=""!_batchFile!"" !_Args!") ^& ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" ^& ECHO UAC.ShellExecute "CMD", "/C ""!_CMD_RUN!""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" ^& cscript "%Temp%\~ElevateMe.vbs" ^& EXIT /B" & SET "_RUN_AS_POWERSHELL=PUSHD "%~dp0" ^& "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy ByPass -Command "Invoke-Expression -Command ([IO.File]::ReadAllText('%~f0'))" ^& POPD ^& EXIT /B" & FSUTIL dirty query %SystemDrive% >NUL 2>&1 & IF !ERRORLEVEL! EQU 0 (!_RUN_AS_POWERSHELL!) ELSE (!_REQUEST_ADMIN!)
 
 # & POPD & EXIT /B 
 
@@ -37,19 +28,7 @@ FSUTIL dirty query %SystemDrive% >NUL & IF %ERRORLEVEL% EQU 0 (
 # Macros? 
 #https://ss64.com/nt/syntax-macros.html
 
-# SET "_REQUEST_ADMIN=ECHO Requesting administrative privileges... waiting 2 seconds ^& PING -n 3 127.0.0.1 >NUL 2>&1 ^& SET "_batchFile=%~f0" ^& SET "_Args=%*" ^& IF NOT [%_Args%]==[] SET "_Args=!_Args:"=""!" ^& IF ["%_Args%"] EQU [""] (SET "_CMD_RUN=!_batchFile!") ELSE (SET "_CMD_RUN=""!_batchFile!"" !_Args!") ^& ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" ^& ECHO UAC.ShellExecute "CMD", "/C ""!_CMD_RUN!""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" ^& cscript "%Temp%\~ElevateMe.vbs" ^& EXIT /B" 
-
-# SET "_REQUEST_ADMIN=ECHO Requesting administrative privileges... waiting 2 seconds ^& PING -n 3 127.0.0.1 >NUL 2>&1 ^& SET "_batchFile=%~f0" 
-
-ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" ^& 
-ECHO UAC.ShellExecute "CMD", "/C ""!_CMD_RUN!""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" ^& 
-
-ECHO Set UAC = CreateObject^("Shell.Application"^) > "%Temp%\~ElevateMe.vbs" ^& 
-ECHO UAC.ShellExecute "CMD", "/C ""!_batchFile!""", "", "RUNAS", 1 >> "%Temp%\~ElevateMe.vbs" ^& 
-
-cscript "%Temp%\~ElevateMe.vbs" ^& EXIT /B" 
-
-# SET "_REQUEST_ADMIN=ECHO Requesting administrative privileges... waiting 2 seconds ^& PING -n 3 127.0.0.1 >NUL ^& SET "_batchFile=%~f0" ^& ECHO Set UAC = CreateObject^("Shell.Application"^) > "%Temp%\~ElevateMe.vbs" ^& ECHO UAC.ShellExecute "CMD", "/C ""!_batchFile!""", "", "RUNAS", 1 >> "%Temp%\~ElevateMe.vbs" ^& cscript "%Temp%\~ElevateMe.vbs" ^& EXIT /B" 
+# SET "_REQUEST_ADMIN=ECHO Requesting administrative privileges... ^(waiting 2 seconds^) ^& PING -n 3 127.0.0.1 >NUL 2>&1 ^& SET "_batchFile=%~f0" ^& SET "_Args=%*" ^& IF NOT [%_Args%]==[] SET "_Args=%_Args:"=""%" ^& IF ["%_Args%"] EQU [""] (SET "_CMD_RUN=%_batchFile%") ELSE (SET "_CMD_RUN=""%_batchFile%"" %_Args%") ^& ECHO Set UAC = CreateObject^("Shell.Application"^) >"%Temp%\~ElevateMe.vbs" ^& ECHO UAC.ShellExecute "CMD", "/C ""%_CMD_RUN%""", "", "RUNAS", 1 >>"%Temp%\~ElevateMe.vbs" ^& cscript "%Temp%\~ElevateMe.vbs" ^& EXIT /B"
 
 
 # SET "_RUN_AS_POWERSHELL=PUSHD "%~dp0" ^& "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy ByPass -Command "Invoke-Expression -Command ([IO.File]::ReadAllText('%~f0'))" ^& POPD ^& EXIT /B"
