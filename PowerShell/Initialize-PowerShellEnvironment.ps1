@@ -48,21 +48,22 @@ Installing the module may result in this message:
 
 WARNING: Module 'Pester' version '3.4.0' published by
 'CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US'
-will be superceded by version '4.4.3' published by 'CN=Jakub Jareš, O=Jakub Jareš,
+will be superceded by version '4.4.3' published by 'CN=Jakub Jareï¿½, O=Jakub Jareï¿½,
 L=Praha, C=CZ'. If you do not trust the new publisher, uninstall the module.
 
 This is because the module is signed by a different certificate than the version that Microsoft shipped with Windows.
 
 In Windows 10 v1809 and higher, you first need to cleanup the default Pester module and only then you can proceed with the installation of higher version of Pester module
 #>
-
+<#
 $module = "C:\Program Files\WindowsPowerShell\Modules\Pester"
 takeown /F $module /A /R
 icacls $module /reset
 icacls $module /grant Administrators:'F' /inheritance:d /T
 Remove-Item -Path $Module -Recurse -Force -Confirm:$false
+#>
 
-Install-Module -Name Pester -Force
+#Install-Module -Name Pester -Force
 
 # For any subsequent update it is enough to run:
 
