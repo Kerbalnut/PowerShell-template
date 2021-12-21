@@ -53,7 +53,10 @@ Function Add-PsModulePath {
 	.NOTES
 	#>
 	[CmdletBinding()]
-	Param()
+	Param(
+		[String]$PathToAdd
+	)
+	
 	
 	
 } # End of Add-PsModulePath function.

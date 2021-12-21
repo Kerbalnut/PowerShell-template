@@ -1,4 +1,9 @@
 # PowerShell-template
+
+Want to learn PowerShell? Let's learn together!
+
+## Original Summary
+
 Example template of a PowerShell module, with some minor tools and a lot of structure, used to test, demo a new module, or as your own Hello World learning tool.
 
 Originally migrated from a separate repo [Batch-Tools-Sysadmin](https://github.com/Kerbalnut/Batch-Tools-SysAdmin/milestone/6?closed=1)
@@ -6,8 +11,6 @@ Originally migrated from a separate repo [Batch-Tools-Sysadmin](https://github.c
 ## Repo status
 
 This repository is currently in a **design and development** phase and should be expected to have big changes per commit.
-
-# Table of Contents:
 
 # Spec
 
