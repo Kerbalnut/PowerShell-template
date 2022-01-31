@@ -3,7 +3,7 @@
 Function Get-EnvironmentVariable {
 	<#
 	.SYNOPSIS
-	Returns the system's Environment variables, the Windows PATH var, or PowerShell Module paths.
+	Returns the system's Environment variables: the Windows PATH var, or PowerShell Module paths.
 	.DESCRIPTION
 	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
 	.PARAMETER Raw
@@ -132,8 +132,9 @@ Function Get-PowershellModulePaths {
 	.SYNOPSIS
 	Alias: Get-EnvironmentVariable -GetModulePaths
 	.DESCRIPTION
-	Get-EnvironmentVariable -GetModulePaths
+	Alias: Get-EnvironmentVariable -GetModulePaths
 	.NOTES
+	Alias: Get-EnvironmentVariable -GetModulePaths
 	Get-Help Get-EnvironmentVariable
 	.LINK
 	Get-EnvironmentVariable
@@ -171,19 +172,19 @@ Function Set-EnvironmentVariable {
 	Surpresses all warning prompts and safety checks.
 	.NOTES
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
-	0
+	
 	Maybe some original author credits as well.
 	#>
 	[Alias("Set-EnvVar")]
 	#Requires -Version 3
-	[CmdletBinding()]
+	[CmdletBinding(DefaultParameterSetName = "PathVar")]
 	Param(
 		[Parameter(ParameterSetName = "PathVar")]
-		[switch]$PathVar,
+		[string]$PathVar,
 		
 		[Parameter(ParameterSetName = "ModulePaths")]
 		[Alias('GetPsModulePaths','GetPowershellModulePaths')]
-		[switch]$ModulePaths,
+		[string]$ModulePaths,
 		
 		[string]$BackupFile = ".\PATH_BACKUP.txt",
 		
@@ -191,71 +192,166 @@ Function Set-EnvironmentVariable {
 		
 		[switch]$Force
 	)
-	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -2
-	
-	Try {
-		#$Env:PATH >> $BackupFile
-		
-		$Env:PATH >> $BackupFile
-		
-	} Catch {
-		Write-Warning "Backup of PATH var before change failed."
-		
-		If (!($Force)) {
-			Write-Error "Backup of PATH var before change failed."
-			Throw "Backup of PATH var before change failed."
-			
-			# Ask user to continue if failure to backup
-			$Title = "Welcome"
-			$Info = "Just to Demo Promt for Choice"
-			$options = [System.Management.Automation.Host.ChoiceDescription[]] @("&Power", "&Shell", "&Quit")
-			[int]$defaultchoice = 2
-			$opt = $host.UI.PromptForChoice($Title , $Info , $Options,$defaultchoice)
-			switch ($opt) {
-				0 { Write-Host "Power" -ForegroundColor Green}
-				1 { Write-Host "Shell" -ForegroundColor Green}
-				2 {Write-Host "Good Bye!!!" -ForegroundColor Green}
-			}
-		}
-		
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 	}
-	
-	
-	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -2
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
 	If ($PathVar) {
-		
-		$OriginalPath = Get-EnvironmentVariable -GetPathVar -Raw
-		$OriginalPaths = ($OriginalPath -split ";").Count
-		Write-Verbose "`$OriginalPath.Length = $($OriginalPath.Length) ; `$OriginalPaths(Count) = $OriginalPaths"
-		
-		$PathVar = $PathVar.Trim()
-		$PathVars = ($PathVar -split ";").Count
-		Write-Verbose "`$PathVar.Length = $($PathVar.Length) ; `$PathVars(Count) = $PathVars"
-		
-		If ($PathVar -notlike '*;*' -And !($Force)) {
-			Write-Host "CAUTION: No ;" -ForegroundColor Red -BackgroundColor Black
-			Write-Warning "No ; semicolon detected in new PATH variable value. This means you will be overwriting PATH with only one directory location. This is NOT recommened."
-			Write-Error "No ; semicolon detected in new PATH variable value. This means you will be overwriting PATH with only one directory location. This is NOT recommened."
-			Throw "No ; semicolon detected in new PATH variable value. This means you will be overwriting PATH with only one directory location. This is NOT recommened."
-		}
-		
-		If ( ($PathVar.Lenth) -lt ($OriginalPath.Length) -And !($Remove) -And !($Force) ) {
-			Write-Warning "New PATH is shorter than old PATH! Is this intentional? You will be removing data from the PATH variable. To avoid this warning in the future, use the -Remove parameter when removing data from PATH."
-			Write-Error "New PATH is shorter than old PATH! Is this intentional? You will be removing data from the PATH variable. To avoid this warning in the future, use the -Remove parameter when removing data from PATH."
-			Throw "New PATH is shorter than old PATH! Is this intentional? You will be removing data from the PATH variable. To avoid this warning in the future, use the -Remove parameter when removing data from PATH."
-		}
-		
-		$PathVar
-		
-		
-		
-		[Environment]::SetEnvironmentVariable("PATH", $Env:PATH + ";C:\Program Files\Scripts", [EnvironmentVariableTarget]::Machine)
-		
-		
+		$EnvVarName = "PATH"
+	} ElseIf ($ModulePaths) {
+		$EnvVarName = "PSModulePath"
 	}
 	
 	
+	$BackupFile = ".\PATH_BACKUP.txt"
+	$BackupFile = "\PATH_BACKUP.txt"
+	$BackupFile = "PATH_BACKUP.txt"
+	$BackupFile = "C:\Users\Grant\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	
+	$BackupFile = ".\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	$BackupFile = "\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	$BackupFile = "MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	
+	Split-Path -Path $BackupFile -Parent
+	
+	$PathPrefix = Split-Path -Path $BackupFile -Parent
+	If ($PathPrefix -eq ".") {
+		Write-Host "Found a dot. ."
+	} ElseIf ($PathPrefix -eq "\") {
+		Write-Host "Found a backslash \"
+	} ElseIf ($PathPrefix -eq "" -Or $null -eq $PathPrefix) {
+		Write-Host "nono Prefix."
+	}
+	
+	$PathPrefix = Split-Path -Path $BackupFile -Parent
+	If ($PathPrefix -eq "." -Or $PathPrefix -eq "\" -Or $PathPrefix -eq "" -Or $null -eq $PathPrefix) {
+		$PartialPath = $True
+	}
+	
+	
+	$ScriptPath = $MyInvocation.MyCommand.Path
+	
+	
+	
+	# Check if file (works with files with and without extension)
+	Test-Path -Path 'C:\Demo\FileWithExtension.txt' -PathType Leaf
+	Test-Path -Path 'C:\Demo\FileWithoutExtension' -PathType Leaf
+	
+	# Check if folder
+	Test-Path -Path 'C:\Demo' -PathType Container
+	
+	
+	
+	
+	$BackupFile | ForEach-Object {"{0} {1}" -f (Get-Item $_).Gettype(), $_}
+	
+	$target = get-item "C:\somefolder" # or "C:\somefolder\somefile.txt"
+	if($target.PSIsContainer) {
+		Write-Host "it's a folder"
+	} Else { 
+		Write-host "its a file"
+	}
+	
+	
+	
+	
+	
+	
+	Test-Path -Path $BackupFile
+	
+	$BackupFile -replace '^\.', ''
+	
+	$WorkingDirectory = Get-Location
+	
+	Join-Path -Path $WorkingDirectory -ChildPath $BackupFile
+	
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	Try {
+		If ($PathVar) {
+			$Env:PATH | Out-file -FilePath $BackupFile
+		} ElseIf ($ModulePaths) {
+			$Env:PSModulePath | Out-file -FilePath $BackupFile
+		}
+	} Catch {
+		Write-Warning "Backup of $EnvVarName var before change failed."
+		
+		If (!($Force)) {
+			#Write-Error "Backup of $EnvVarName var before change failed."
+			#Throw "Backup of $EnvVarName var before change failed."
+			
+			# Ask user to continue if failure to backup
+			$Title = "Backup failed. Continue anyway?"
+			$Info = "Backing-up the $EnvVarName environment variable before changing it failed. Continue changing it anyway?"
+			# Use Ampersand & in front of letter to designate that as the choice key. E.g. "&Yes" for Y, "Y&Ellow" for E.
+			$Yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", "Proceed with setting $EnvVarName Env Var without backup. (Not Recommended)"
+			$No = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Halt operation. Inspect backup file location: `"$BackupFile`""
+			#$Options = [System.Management.Automation.Host.ChoiceDescription[]] @("&Power", "&Shell", "&Quit")
+			$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Yes, $No)
+			[int]$DefaultChoice = 1
+			$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
+			switch ($Result) {
+				0 {
+					Write-Error "Backup of $EnvVarName var before change failed."
+					Write-Verbose "User verified proceeding without backup."
+				}
+				1 {
+					Write-Verbose "Halting operation."
+					Write-Verbose "Please inspect backup file location for permissions: `n`"$BackupFile`""
+					Split-Path -Path $BackupFile -Parent
+				}
+			} # End Switch $Result
+		} # End If !($Force)
+		
+	} # End Try/Catch
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	If ($PathVar) {
+		$OriginalPath = Get-EnvironmentVariable -GetPathVar -Raw @CommonParameters
+	} ElseIf ($ModulePaths) {
+		$OriginalPath = Get-EnvironmentVariable -GetModulePaths -Raw @CommonParameters
+	}
+	
+	If ($PathVar) {
+		$EnvVarPath = $PathVar
+	} ElseIf ($ModulePaths) {
+		$EnvVarPath = $ModulePaths
+	}
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	$OriginalPaths = ($OriginalPath -split ";").Count
+	Write-Verbose "`$OriginalPath.Length = $($OriginalPath.Length) ; `$OriginalPaths(Count) = $OriginalPaths"
+	
+	$EnvVarPath = $EnvVarPath.Trim()
+	$EnvVarPaths = ($EnvVarPath -split ";").Count
+	Write-Verbose "`$EnvVarPath.Length = $($EnvVarPath.Length) ; `$EnvVarPaths(Count) = $EnvVarPaths"
+	
+	If ($EnvVarPath -notlike '*;*' -And !($Force)) {
+		Write-Host "CAUTION: No ;" -ForegroundColor Red -BackgroundColor Black
+		Write-Warning "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
+		Write-Error "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
+		Throw "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
+	}
+	
+	If ( ($EnvVarPath.Lenth) -lt ($OriginalPath.Length) -And !($Remove) -And !($Force) ) {
+		Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+		Write-Error "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future,d use the -Remove parameter when removing data from $EnvVarName."
+		Throw "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+	}
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	If ($PathVar) {
+		[Environment]::SetEnvironmentVariable("PATH", $EnvVarPath, [EnvironmentVariableTarget]::Machine)
+	} ElseIf ($ModulePaths) {
+		[Environment]::SetEnvironmentVariable("PSModulePath", $EnvVarPath, [EnvironmentVariableTarget]::Machine)
+	}
 	
 	Return
 } # End of Set-EnvironmentVariable function.
@@ -276,25 +372,39 @@ Function Add-EnvironmentVariable {
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
 	
 	Maybe some original author credits as well.
+	.EXAMPLE
+	
 	#>
 	[Alias("Add-EnvVar")]
 	#Requires -Version 3
-	[CmdletBinding()]
+	[CmdletBinding(DefaultParameterSetName = "PathVar")]
 	Param(
-		[Parameter(ParameterSetName = "PathVar")]
+		[Parameter(ParameterSetName = "PathVar", Position = 0)]
 		[String]$AddToPathVar,
 		
 		[Parameter(ParameterSetName = "ModulePaths")]
 		[String]$AddToModulePaths
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	If ($AddToPathVar) {
-		$PathVar = Get-EnvironmentVariable -GetPathVar
-		$PathVar += $AddToPathVar
-		$PathVar = $PathVar | Sort-Object
-		
-		
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	If ($AddToPathVar) {
+		$PathVar = Get-EnvironmentVariable -GetPathVar @CommonParameters
+		# Check if path to add already exists in env var
+		ForEach ($Path in $PathVar) {
+			If ($Path -eq $AddToPathVar) {
+				Write-Warning "Path to add already exists in PATH environment var:`n`"$Path`""
+				Return
+			}
+		}
+		$PathVar += $AddToPathVar
+		$PathVar = ($PathVar | Sort-Object) -join ';'
+		Set-EnvironmentVariable -PathVar $PathVar @CommonParameters
+	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
 	
 	
@@ -333,6 +443,11 @@ Function New-TaskTrackingInitiativeTEST {
 		[String]$Path
 		
 	)
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
 	
