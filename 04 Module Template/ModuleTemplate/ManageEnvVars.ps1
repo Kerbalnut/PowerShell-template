@@ -207,83 +207,28 @@ Function Set-EnvironmentVariable {
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	### TESTING: Detect if relative path or literal
-	
-	
-	$BackupFileTest = ".\PATH_BACKUP.txt"
-	$BackupFileTest = "\PATH_BACKUP.txt"
-	$BackupFileTest = "PATH_BACKUP.txt"
-	$BackupFileTest = "PATH_BACKUP"
-	$BackupFileTest = "C:\Users\Grant\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
-	$BackupFileTest = "$Home\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
-	$BackupFileTest = ".\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
-	$BackupFileTest = "\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
-	$BackupFileTest = "MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
-	
-	
-	$BackupFileTest = @()
-	$BackupFileTest += ".\PATH_BACKUP.txt"
-	$BackupFileTest += "\PATH_BACKUP.txt"
-	$BackupFileTest += "PATH_BACKUP.txt"
-	$BackupFileTest += "PATH_BACKUP" # <-
-	$BackupFileTest += "C:\Users\Grant\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
-	$BackupFileTest += "$Home\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
-	#$BackupFileTest += ".\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt" # Who Cares?
-	#$BackupFileTest += "\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt" # Who Cares?
-	#$BackupFileTest += "MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt" # Who Cares?
-	
-	
-	<#
-	Split-Path -Path $BackupFile -Parent
-	
-	$PathPrefix = Split-Path -Path $BackupFile -Parent
-	If ($PathPrefix -eq ".") {
-		Write-Host "Found a dot. ."
-	} ElseIf ($PathPrefix -eq "\") {
-		Write-Host "Found a backslash \"
-	} ElseIf ($PathPrefix -eq "" -Or $null -eq $PathPrefix) {
-		Write-Host "nono Prefix."
-	}
-	#>
-	
-	$VerbosePreference = 'Continue'
-	
-	ForEach ($file in $BackupFileTest) {
-	
-	Write-Host "-------------------------------------------------------------------------"
-	
-	#$BackupFile = $BackupFileTest
-	$BackupFile = $file
-	$BackupFile
-	
+	# Check if given BackupFile path is a filename, or full path.
 	$PathPrefix = Split-Path -Path $BackupFile -Parent
 	
 	If ($PathPrefix -ne "" -And $null -ne $PathPrefix) {
 		Test-Path -Path $PathPrefix -PathType Container
 	}
 	
-	$PartialPath = $False
 	# Check if given $BackupFile string is a file
+	$PartialPath = $False
 	If ($PathPrefix -eq "." -Or $PathPrefix -eq "\" -Or $PathPrefix -eq "" -Or $null -eq $PathPrefix) {
 		$PartialPath = $True
 		Write-Verbose "Partial Path detected: $PartialPath"
 	}
-	# Check if given $BackupFile string is a partial/truncated path
-	
-	[String]$BackupFile | Select-Object -First 1
-	
-	If ($PathPrefix -eq "." -Or $PathPrefix -eq "\" -Or $PathPrefix -eq "" -Or $null -eq $PathPrefix) {
-		$PartialPath = $True
-		Write-Verbose "Partial Path detected: $PartialPath"
-	}
-	
 	
 	If ($PartialPath) {
+		# If BackupFile filename starts with a period . remove it: E.g. ".\Backup file name.log" to "\Backup file name.log"
 		$BackupFile = $BackupFile -replace '^\.', ''
 		# RegEx: ^\.
 		#    ^   Asserts position at start of a line.
 		#    \.  Matches the period . character literally. (Backslash \ is the escape character)
 		
+		# Get current execution path, in order to combine with given BackupFile filename to get a full file path.
 		$ScriptPath = $MyInvocation.MyCommand.Path
 		# If being run via F8 'Run Selection' method, then $MyInvocation.MyCommand.Definition will return entire script being executed, and will probably make Split-Path fail.
 		#$ScriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent # PoSh v2 compatible - thanks to https://stackoverflow.com/questions/5466329/whats-the-best-way-to-determine-the-location-of-the-current-powershell-script
@@ -291,16 +236,10 @@ Function Set-EnvironmentVariable {
 		Write-Verbose "`$ScriptPath = $ScriptPath"
 		#Write-Verbose "`$ScriptDir = $ScriptDir"
 		Write-Verbose "`$WorkingDirectory = $WorkingDirectory"
-		$BackupFile
+		
+		# Combine current execution path with given BackupFile filename to get a full file path:
 		$BackupFile = Join-Path -Path $WorkingDirectory -ChildPath $BackupFile
-		$BackupFile
 	}
-	
-	Test-Path -Path $BackupFile
-	Test-Path -Path $BackupFile -PathType Container
-	Test-Path -Path $BackupFile -PathType Leaf
-	
-	$BackupFile
 	
 	# Get file extension:
 	#https://www.tutorialspoint.com/how-to-get-the-file-extension-using-powershell
@@ -367,44 +306,6 @@ Function Set-EnvironmentVariable {
 	#Add-Content -Path $BackupFile -Value "`n"
 	Add-Content -Path $BackupFile -Value (Get-Date)
 	Add-Content -Path $BackupFile -Value "`n"
-	Write-Host "-------------------------------------------------------------------------"
-	}
-	
-	
-	
-	<#
-	# Check if file (works with files with and without extension)
-	Test-Path -Path 'C:\Demo\FileWithExtension.txt' -PathType Leaf
-	Test-Path -Path 'C:\Demo\FileWithoutExtension' -PathType Leaf
-	
-	# Check if folder
-	Test-Path -Path 'C:\Demo' -PathType Container
-	
-	
-	
-	
-	$BackupFile | ForEach-Object {"{0} {1}" -f (Get-Item $_).Gettype(), $_}
-	
-	$target = get-item "C:\somefolder" # or "C:\somefolder\somefile.txt"
-	if($target.PSIsContainer) {
-		Write-Host "it's a folder"
-	} Else { 
-		Write-host "its a file"
-	}
-	
-	
-	
-	
-	
-	
-	Test-Path -Path $BackupFile
-	
-	$BackupFile -replace '^\.', ''
-	
-	$WorkingDirectory = Get-Location
-	
-	Join-Path -Path $WorkingDirectory -ChildPath $BackupFile
-	#>
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
@@ -542,14 +443,71 @@ Function Add-EnvironmentVariable {
 		Set-EnvironmentVariable -PathVar $PathVar @CommonParameters
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	
-	
-	
+	If ($AddToModulePaths) {
+		$EnvVar = Get-EnvironmentVariable -GetModulePaths @CommonParameters
+		# Check if path to add already exists in env var
+		ForEach ($Path in $EnvVar) {
+			If ($Path -eq $AddToModulePaths) {
+				Write-Warning "Path to add already exists in PATH environment var:`n`"$Path`""
+				Return
+			}
+		}
+		$EnvVar += $AddToModulePaths
+		$EnvVar = ($EnvVar | Sort-Object) -join ';'
+		Set-EnvironmentVariable -ModulePaths $EnvVar @CommonParameters
+	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return
 } # End of Add-EnvironmentVariable function.
 Set-Alias -Name 'Add-EnvVar' -Value 'Add-EnvironmentVariable'
 #-----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+Function Remove-EnvironmentVariable {
+	<#
+	.SYNOPSIS
+	Single-line summary.
+	.DESCRIPTION
+	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	.NOTES
+	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
+	
+	Maybe some original author credits as well.
+	#>
+	[Alias("Remove-EnvVar")]
+	#Requires -Version 3
+	[CmdletBinding()]
+	Param(
+		[Parameter(Mandatory = $True, Position = 0,
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True,
+		           HelpMessage = "Path to ...")]
+		[ValidateNotNullOrEmpty()]
+		[String]$Path
+		
+	)
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	Return
+} # End of Remove-EnvironmentVariable function.
+Set-Alias -Name 'Remove-EnvVar' -Value 'Remove-EnvironmentVariable'
+#-----------------------------------------------------------------------------------------------------------------------
+
+
+
 
 
 
