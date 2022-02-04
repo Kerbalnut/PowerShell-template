@@ -225,12 +225,12 @@ Function Set-EnvironmentVariable {
 	$BackupFileTest += ".\PATH_BACKUP.txt"
 	$BackupFileTest += "\PATH_BACKUP.txt"
 	$BackupFileTest += "PATH_BACKUP.txt"
-	$BackupFileTest += "PATH_BACKUP"
+	$BackupFileTest += "PATH_BACKUP" # <-
 	$BackupFileTest += "C:\Users\Grant\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
 	$BackupFileTest += "$Home\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
-	$BackupFileTest += ".\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
-	$BackupFileTest += "\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
-	$BackupFileTest += "MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
+	#$BackupFileTest += ".\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt" # Who Cares?
+	#$BackupFileTest += "\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt" # Who Cares?
+	#$BackupFileTest += "MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt" # Who Cares?
 	
 	
 	<#
@@ -302,49 +302,59 @@ Function Set-EnvironmentVariable {
 	
 	$BackupFile
 	
-	If ((Test-Path -Path $BackupFile)) {
-		# Get file extension:
-		#https://www.tutorialspoint.com/how-to-get-the-file-extension-using-powershell
-		$Method = 0
-		switch ($Method) {
-			0 {
-				$FileExtension = [System.IO.Path]::GetExtension($BackupFile)
-				# .txt
-				# .zip
-			}
-			1 {
-				$FileExtension = ((Split-Path $BackupFile -Leaf).Split('.'))[1]
-				# txt
-				# zip
-			}
-			2 {
-				$FileExtension = (Get-ChildItem $BackupFile).Extension
-				# .txt
-				# .zip
-			}
-			3 {
-				$FileExtension = (Get-Item $BackupFile).Extension
-				# .txt
-				# .zip
-			}
-			Default {Throw "Please select a method for getting PowerShell path extension."}
+	# Get file extension:
+	#https://www.tutorialspoint.com/how-to-get-the-file-extension-using-powershell
+	$Method = 0
+	switch ($Method) {
+		0 {
+			$FileExtension = [System.IO.Path]::GetExtension($BackupFile)
+			# .txt
+			# .zip
 		}
-		
-		If ($FileExtension -eq '' -Or $null -eq $FileExtension) {
-			$FileExtension = ".txt"
-		} Else {
+		1 {
+			$FileExtension = ((Split-Path $BackupFile -Leaf).Split('.'))[1]
+			# txt
+			# zip
+		}
+		2 {
+			$FileExtension = (Get-ChildItem $BackupFile).Extension
+			# .txt
+			# .zip
+		}
+		3 {
+			$FileExtension = (Get-Item $BackupFile).Extension
+			# .txt
+			# .zip
+		}
+		Default {Throw "Please select a method for getting PowerShell path extension."}
+	}
+	Write-Verbose "`$FileExtension = `"$FileExtension`""
+	
+	# If given filename doesn't have an extension for some reason, assign one.
+	If ($FileExtension -eq '' -Or $null -eq $FileExtension) {
+		$FileExtension = ".txt"
+		Write-Verbose "`$FileExtension = `"$FileExtension`" (none detected, defaulting to .txt)"
+		$BackupFile = $BackupFile + $FileExtension
+	}
+	
+	# If BackupFile still exists, try to rename it to BackupFile_old or something:
+	If ((Test-Path -Path $BackupFile)) {
+		# Generate BackupFile_old filepath:
+		If ($FileExtension -ne '' -And $null -ne $FileExtension) {
 			# Remove file extension:
 			$NoExtension = $BackupFile -replace '\.\w+$', ''
 			# RegEx: \.\w+$
 			#    \.  Matches the period . character literally. (Backslash \ is the escape character)
 			#    \w+ Matches any word character (equivalent to [a-zA-Z0-9_]), and the plus + modifier matches between one and unlimited times (Greedy).
 			#    $   Asserts position at the end of a line.
+		}
 		
 		$NewName = $NoExtension + "_old" + $FileExtension
 		
+		# Check if this BackupFile_old file already exists:
 		If ((Test-Path -Path $NewName)) {
-			Write-Warning "Removing old backup file before generating new one: `"$NewName`""
 			Write-Verbose "Removing old backup file before generating new one: `"$NewName`""
+			Write-Warning "Removing old backup file before generating new one: `"$NewName`""
 			Remove-Item -Path $NewName
 			Start-Sleep -Milliseconds 150
 		}
