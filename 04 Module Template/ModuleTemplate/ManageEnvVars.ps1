@@ -163,9 +163,9 @@ Set-Alias -Name 'Get-PsModulePaths' -Value 'Get-PowershellModulePaths'
 Function Set-EnvironmentVariable {
 	<#
 	.SYNOPSIS
-	Single-line summary.
+	Sets an environment variable, either PATH or the PowerShell Module paths.
 	.DESCRIPTION
-	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	When given either a PathVar string or ModulePaths string, this function will overwrite either the PATH or PSModulePath environment variable respectively.
 	.PARAMETER Remove
 	Surpresses warning prompts when removing Paths. Note, warnings will still be produced when there are only 2 paths left and you are trying to remove one. To surpress all warnings, see Force parameter.
 	.PARAMETER Force
@@ -197,14 +197,6 @@ Function Set-EnvironmentVariable {
 		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
 		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 	}
-	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	
-	If ($PathVar) {
-		$EnvVarName = "PATH"
-	} ElseIf ($ModulePaths) {
-		$EnvVarName = "PSModulePath"
-	}
-	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
 	# Check if given BackupFile path is a filename, or full path.
@@ -301,11 +293,19 @@ Function Set-EnvironmentVariable {
 		Start-Sleep -Milliseconds 150
 	}
 	#New-Item -Path $BackupFile -Value (Get-Date -Format "o")
-	New-Item -Path $BackupFile
+	$NewItemResults = New-Item -Path $BackupFile
 	Add-Content -Path $BackupFile -Value (Get-Date -Format "o")
 	#Add-Content -Path $BackupFile -Value "`n"
 	Add-Content -Path $BackupFile -Value (Get-Date)
 	Add-Content -Path $BackupFile -Value "`n"
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	If ($PathVar) {
+		$EnvVarName = "PATH"
+	} ElseIf ($ModulePaths) {
+		$EnvVarName = "PSModulePath"
+	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
