@@ -205,16 +205,35 @@ Function Set-EnvironmentVariable {
 		$EnvVarName = "PSModulePath"
 	}
 	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	$BackupFile = ".\PATH_BACKUP.txt"
-	$BackupFile = "\PATH_BACKUP.txt"
-	$BackupFile = "PATH_BACKUP.txt"
-	$BackupFile = "C:\Users\Grant\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	### TESTING: Detect if relative path or literal
 	
-	$BackupFile = ".\MiniTaskMang-PoSh\PATH_BACKUP.txt"
-	$BackupFile = "\MiniTaskMang-PoSh\PATH_BACKUP.txt"
-	$BackupFile = "MiniTaskMang-PoSh\PATH_BACKUP.txt"
 	
+	$BackupFileTest = ".\PATH_BACKUP.txt"
+	$BackupFileTest = "\PATH_BACKUP.txt"
+	$BackupFileTest = "PATH_BACKUP.txt"
+	$BackupFileTest = "PATH_BACKUP"
+	$BackupFileTest = "C:\Users\Grant\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	$BackupFileTest = "$Home\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	$BackupFileTest = ".\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
+	$BackupFileTest = "\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
+	$BackupFileTest = "MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
+	
+	
+	$BackupFileTest = @()
+	$BackupFileTest += ".\PATH_BACKUP.txt"
+	$BackupFileTest += "\PATH_BACKUP.txt"
+	$BackupFileTest += "PATH_BACKUP.txt"
+	$BackupFileTest += "PATH_BACKUP"
+	$BackupFileTest += "C:\Users\Grant\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	$BackupFileTest += "$Home\Documents\GitHub\MiniTaskMang-PoSh\PATH_BACKUP.txt"
+	$BackupFileTest += ".\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
+	$BackupFileTest += "\MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
+	$BackupFileTest += "MiniTaskMang-PoSh\Test Project\PATH_BACKUP.txt"
+	
+	
+	<#
 	Split-Path -Path $BackupFile -Parent
 	
 	$PathPrefix = Split-Path -Path $BackupFile -Parent
@@ -225,17 +244,125 @@ Function Set-EnvironmentVariable {
 	} ElseIf ($PathPrefix -eq "" -Or $null -eq $PathPrefix) {
 		Write-Host "nono Prefix."
 	}
+	#>
+	
+	$VerbosePreference = 'Continue'
+	
+	ForEach ($file in $BackupFileTest) {
+	
+	Write-Host "-------------------------------------------------------------------------"
+	
+	#$BackupFile = $BackupFileTest
+	$BackupFile = $file
+	$BackupFile
 	
 	$PathPrefix = Split-Path -Path $BackupFile -Parent
+	
+	If ($PathPrefix -ne "" -And $null -ne $PathPrefix) {
+		Test-Path -Path $PathPrefix -PathType Container
+	}
+	
+	$PartialPath = $False
+	# Check if given $BackupFile string is a file
 	If ($PathPrefix -eq "." -Or $PathPrefix -eq "\" -Or $PathPrefix -eq "" -Or $null -eq $PathPrefix) {
 		$PartialPath = $True
+		Write-Verbose "Partial Path detected: $PartialPath"
+	}
+	# Check if given $BackupFile string is a partial/truncated path
+	
+	[String]$BackupFile | Select-Object -First 1
+	
+	If ($PathPrefix -eq "." -Or $PathPrefix -eq "\" -Or $PathPrefix -eq "" -Or $null -eq $PathPrefix) {
+		$PartialPath = $True
+		Write-Verbose "Partial Path detected: $PartialPath"
 	}
 	
 	
-	$ScriptPath = $MyInvocation.MyCommand.Path
+	If ($PartialPath) {
+		$BackupFile = $BackupFile -replace '^\.', ''
+		# RegEx: ^\.
+		#    ^   Asserts position at start of a line.
+		#    \.  Matches the period . character literally. (Backslash \ is the escape character)
+		
+		$ScriptPath = $MyInvocation.MyCommand.Path
+		# If being run via F8 'Run Selection' method, then $MyInvocation.MyCommand.Definition will return entire script being executed, and will probably make Split-Path fail.
+		#$ScriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent # PoSh v2 compatible - thanks to https://stackoverflow.com/questions/5466329/whats-the-best-way-to-determine-the-location-of-the-current-powershell-script
+		$WorkingDirectory = Get-Location
+		Write-Verbose "`$ScriptPath = $ScriptPath"
+		#Write-Verbose "`$ScriptDir = $ScriptDir"
+		Write-Verbose "`$WorkingDirectory = $WorkingDirectory"
+		$BackupFile
+		$BackupFile = Join-Path -Path $WorkingDirectory -ChildPath $BackupFile
+		$BackupFile
+	}
+	
+	Test-Path -Path $BackupFile
+	Test-Path -Path $BackupFile -PathType Container
+	Test-Path -Path $BackupFile -PathType Leaf
+	
+	$BackupFile
+	
+	If ((Test-Path -Path $BackupFile)) {
+		# Get file extension:
+		#https://www.tutorialspoint.com/how-to-get-the-file-extension-using-powershell
+		$Method = 0
+		switch ($Method) {
+			0 {
+				$FileExtension = [System.IO.Path]::GetExtension($BackupFile)
+				# .txt
+				# .zip
+			}
+			1 {
+				$FileExtension = ((Split-Path $BackupFile -Leaf).Split('.'))[1]
+				# txt
+				# zip
+			}
+			2 {
+				$FileExtension = (Get-ChildItem $BackupFile).Extension
+				# .txt
+				# .zip
+			}
+			3 {
+				$FileExtension = (Get-Item $BackupFile).Extension
+				# .txt
+				# .zip
+			}
+			Default {Throw "Please select a method for getting PowerShell path extension."}
+		}
+		
+		If ($FileExtension -eq '' -Or $null -eq $FileExtension) {
+			$FileExtension = ".txt"
+		} Else {
+			# Remove file extension:
+			$NoExtension = $BackupFile -replace '\.\w+$', ''
+			# RegEx: \.\w+$
+			#    \.  Matches the period . character literally. (Backslash \ is the escape character)
+			#    \w+ Matches any word character (equivalent to [a-zA-Z0-9_]), and the plus + modifier matches between one and unlimited times (Greedy).
+			#    $   Asserts position at the end of a line.
+		
+		$NewName = $NoExtension + "_old" + $FileExtension
+		
+		If ((Test-Path -Path $NewName)) {
+			Write-Warning "Removing old backup file before generating new one: `"$NewName`""
+			Write-Verbose "Removing old backup file before generating new one: `"$NewName`""
+			Remove-Item -Path $NewName
+			Start-Sleep -Milliseconds 150
+		}
+		Rename-Item -Path $BackupFile -NewName $NewName
+		Start-Sleep -Milliseconds 150
+	}
+	#New-Item -Path $BackupFile -Value (Get-Date -Format "o")
+	New-Item -Path $BackupFile
+	Add-Content -Path $BackupFile -Value (Get-Date -Format "o")
+	#Add-Content -Path $BackupFile -Value "`n"
+	Add-Content -Path $BackupFile -Value (Get-Date)
+	Add-Content -Path $BackupFile -Value "`n"
+	Write-Host "-------------------------------------------------------------------------"
+	}
 	
 	
 	
+	<#
 	# Check if file (works with files with and without extension)
 	Test-Path -Path 'C:\Demo\FileWithExtension.txt' -PathType Leaf
 	Test-Path -Path 'C:\Demo\FileWithoutExtension' -PathType Leaf
@@ -267,15 +394,15 @@ Function Set-EnvironmentVariable {
 	$WorkingDirectory = Get-Location
 	
 	Join-Path -Path $WorkingDirectory -ChildPath $BackupFile
-	
+	#>
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
 	Try {
 		If ($PathVar) {
-			$Env:PATH | Out-file -FilePath $BackupFile
+			$Env:PATH | Out-file -FilePath $BackupFile -Append
 		} ElseIf ($ModulePaths) {
-			$Env:PSModulePath | Out-file -FilePath $BackupFile
+			$Env:PSModulePath | Out-file -FilePath $BackupFile -Append
 		}
 	} Catch {
 		Write-Warning "Backup of $EnvVarName var before change failed."
