@@ -396,6 +396,8 @@ Function Set-EnvironmentVariable {
 	Add-Content -Path $BackupFile -Value (Get-Date)
 	Add-Content -Path $BackupFile -Value "`n"
 	
+	Write-Verbose "Finished verifying `$BackupFile path: `"$BackupFile`""
+	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
 	If ($PathVar) {
@@ -404,16 +406,30 @@ Function Set-EnvironmentVariable {
 		$EnvVarName = "PSModulePath"
 	}
 	
+	If ($PathVar) {
+		$OriginalPath = Get-EnvironmentVariable -GetPathVar -Raw @CommonParameters
+	} ElseIf ($ModulePaths) {
+		$OriginalPath = Get-EnvironmentVariable -GetModulePaths -Raw @CommonParameters
+	}
+	
+	If ($PathVar) {
+		$EnvVarPath = $PathVar
+	} ElseIf ($ModulePaths) {
+		$EnvVarPath = $ModulePaths
+	}
+	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	Write-Verbose "Backing up current $EnvVarName environment variable."
-	Write-Debug "Backing up current $EnvVarName environment variable."
+	Write-Verbose "Backing up current $EnvVarName environment variable to: `"$BackupFile`""
+	Write-Debug "Backing up current $EnvVarName environment variable to: `"$BackupFile`""
 	Try {
-		If ($PathVar) {
+		<#If ($PathVar) {
 			$Env:PATH | Out-file -FilePath $BackupFile -Append
 		} ElseIf ($ModulePaths) {
 			$Env:PSModulePath | Out-file -FilePath $BackupFile -Append
-		}
+		}#>
+		
+		$OriginalPath | Out-file -FilePath $BackupFile -Append
 	} Catch {
 		Write-Warning "Backup of $EnvVarName var before change failed."
 		If (!($Force)) {
@@ -443,20 +459,6 @@ Function Set-EnvironmentVariable {
 			} # End switch ($Result)
 		} # End If !($Force)
 	} # End Try/Catch $BackupFile
-	
-	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	
-	If ($PathVar) {
-		$OriginalPath = Get-EnvironmentVariable -GetPathVar -Raw @CommonParameters
-	} ElseIf ($ModulePaths) {
-		$OriginalPath = Get-EnvironmentVariable -GetModulePaths -Raw @CommonParameters
-	}
-	
-	If ($PathVar) {
-		$EnvVarPath = $PathVar
-	} ElseIf ($ModulePaths) {
-		$EnvVarPath = $ModulePaths
-	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
@@ -540,7 +542,7 @@ Function Add-EnvironmentVariable {
 	.DESCRIPTION
 	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
 	.PARAMETER Force
-	Surpresses all warning prompts and safety checks.
+	Surpresses all warning prompts and safety checks. Function will still atttempt to create backup files, but will silently continue if that fails. Will automatically create duplicates.
 	.NOTES
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
 	
@@ -564,6 +566,9 @@ Function Add-EnvironmentVariable {
 		
 		[string]$BackupFile = ".\PATH_BACKUP.txt",
 		
+		[Alias('q','Silent','s')]
+		[switch]$Quiet,
+		
 		[switch]$Force
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -572,18 +577,14 @@ Function Add-EnvironmentVariable {
 		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$GetEnvVarParams = $CommonParameters
+	$SetEnvVarParams = $CommonParameters
 	If ($VerbosePreference -ne 'SilentlyContinue') {
-		$GetEnvVarParams = $CommonParameters
-		$SetEnvVarParams = $CommonParameters
-		$GetEnvVarParams += @{
-			Quiet = $True
-		}
-		$SetEnvVarParams += @{
-			Quiet = $True
-		}
-	} Else {
-		$GetEnvVarParams = $CommonParameters
-		$SetEnvVarParams = $CommonParameters
+		$GetEnvVarParams += @{Quiet = $True}
+		$SetEnvVarParams += @{Quiet = $True}
+	} ElseIf ($Quiet) {
+		$GetEnvVarParams += @{Quiet = $Quiet}
+		$SetEnvVarParams += @{Quiet = $Quiet}
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($AddToPathVar) {
@@ -596,10 +597,12 @@ Function Add-EnvironmentVariable {
 		$PathVar = Get-EnvironmentVariable -GetPathVar @GetEnvVarParams
 		Write-Verbose "$($AddToPathVar.Count) path(s) to add to $EnvVarName env var."
 		$i = 0
+		$NumPathsToAdd = 0
 		ForEach ($PathToAdd in $AddToPathVar) {
 			$i++
 			# Check if path to add already exists in env var
 			$AlreadyExists = $False
+			$DuplicateString = ""
 			ForEach ($Path in $PathVar) {
 				If ($Path -eq $PathToAdd) {
 					Write-Warning "Path to add already exists in $EnvVarName environment var:`n`"$Path`""
@@ -634,7 +637,12 @@ Function Add-EnvironmentVariable {
 						} # End Try/Catch RefreshEnv
 					} # End If (Get-Command RefreshEnv)
 					#https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-7.2#debugpreference
-					If ($DebugPreference -ne 'SilentlyContinue') {
+					If ($Force) {
+						Write-Debug "Path to add already exists in $EnvVarName environment var: `"$Path`".`n Normally this function would not add this path when `$Debug switch is not used. Add duplicate path anyway?"
+						Write-Verbose "-Force option enabled, automatically adding duplicate path: `"$Path`""
+						$AlreadyExists = $False
+						$DuplicateString = " (duplicate)"
+					} ElseIf ($DebugPreference -ne 'SilentlyContinue') {
 						# Ask user to continue adding duplicate path anyway if $Debug is enabled:
 						$Title = "Add duplicate path to $EnvVarName var?"
 						$Info = "Path to add already exists in $EnvVarName environment var:`n`"$Path`". Normally this function would not add this path when `$Debug switch is not used. Add duplicate path anyway?"
@@ -650,6 +658,7 @@ Function Add-EnvironmentVariable {
 							0 {
 								Write-Verbose "Option $Result chosen: Yes"
 								$AlreadyExists = $False
+								$DuplicateString = " (duplicate)"
 							}
 							1 {
 								Write-Verbose "Option $Result chosen: No"
@@ -663,27 +672,46 @@ Function Add-EnvironmentVariable {
 			} # End ForEach ($PathVar)
 			# Finished checking if path already exists in $EnvVarName env var
 			If (!($AlreadyExists)) {
-				Write-Verbose "#$($i): Path to add: `"$PathToAdd`""
+				Write-Verbose "#$($i): Path to add: `"$PathToAdd`"$DuplicateString"
 				$PathVar += $PathToAdd
+				$NumPathsToAdd++
+			} Else {
+				Write-Verbose "#$($i): Already exists in $EnvVarName var: `"$PathToAdd`""
 			}
 		} # End ForEach ($AddToPathVar)
-		$PathVar = ($PathVar | Sort-Object) -join ';'
-		# Remove preceeding semicolon ; leftover by -join operation
-		$PathVar = $PathVar -replace '^;', ''
-		# RegEx: ^;
-		#    ^   Asserts position at start of a line.
-		#    ;   Matches the semicolon ; character literally.
-		Set-EnvironmentVariable -PathVar $PathVar @SetEnvVarParams
-	}
+		
+		If ($NumPathsToAdd -gt 0) {
+			Write-Verbose "Adding $NumPathsToAdd path(s) to $EnvVarName var:"
+			$SetEnvVar = $True
+		} ElseIf ($Force) {
+			Write-Verbose "(-Force parameter:) Adding $NumPathsToAdd path(s) to $EnvVarName var:"
+			$SetEnvVar = $True
+		} Else {
+			Write-Warning "No paths were added to $EnvVarName environment var."
+			$SetEnvVar = $False
+		}
+		If ($SetEnvVar) {
+			$PathVar = ($PathVar | Sort-Object) -join ';'
+			# Remove preceeding semicolon ; leftover by -join operation
+			$PathVar = $PathVar -replace '^;', ''
+			# RegEx: ^;
+			#    ^   Asserts position at start of a line.
+			#    ;   Matches the semicolon ; character literally.
+			Set-EnvironmentVariable -PathVar $PathVar @SetEnvVarParams
+		}
+		Return
+	} # End If ($AddToPathVar)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($AddToModulePaths) {
 		$EnvVar = Get-EnvironmentVariable -GetModulePaths @GetEnvVarParams
 		Write-Verbose "$($AddToModulePaths.Count) path(s) to add to $EnvVarName env var."
 		$i = 0
+		$NumPathsToAdd = 0
 		ForEach ($PathToAdd in $AddToModulePaths) {
 			$i++
 			# Check if path to add already exists in env var
 			$AlreadyExists = $False
+			$DuplicateString = ""
 			ForEach ($Path in $EnvVar) {
 				If ($Path -eq $PathToAdd) {
 					Write-Warning "Path to add already exists in $EnvVarName environment var:`n`"$Path`""
@@ -718,7 +746,12 @@ Function Add-EnvironmentVariable {
 						} # End Try/Catch RefreshEnv
 					} # End If (Get-Command RefreshEnv)
 					#https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-7.2#debugpreference
-					If ($DebugPreference -ne 'SilentlyContinue') {
+					If ($Force) {
+						Write-Debug "Path to add already exists in $EnvVarName environment var: `"$Path`".`n Normally this function would not add this path when `$Debug switch is not used. Add duplicate path anyway?"
+						Write-Verbose "-Force option enabled, automatically adding duplicate path: `"$Path`""
+						$AlreadyExists = $False
+						$DuplicateString = " (duplicate)"
+					} ElseIf ($DebugPreference -ne 'SilentlyContinue') {
 						# Ask user to continue adding duplicate path anyway if $Debug is enabled:
 						$Title = "Add duplicate path to $EnvVarName var?"
 						$Info = "Path to add already exists in $EnvVarName environment var:`n`"$Path`". Normally this function would not add this path when `$Debug switch is not used. Add duplicate path anyway?"
@@ -734,6 +767,7 @@ Function Add-EnvironmentVariable {
 							0 {
 								Write-Verbose "Option $Result chosen: Yes"
 								$AlreadyExists = $False
+								$DuplicateString = " (duplicate)"
 							}
 							1 {
 								Write-Verbose "Option $Result chosen: No"
@@ -748,18 +782,35 @@ Function Add-EnvironmentVariable {
 			
 			# Finished checking if path already exists in $EnvVarName env var
 			If (!($AlreadyExists)) {
-				Write-Verbose "#$($i): Path to add: `"$PathToAdd`""
+				Write-Verbose "#$($i): Path to add: `"$PathToAdd`"$DuplicateString"
 				$EnvVar += $PathToAdd
+				$NumPathsToAdd++
+			} Else {
+				Write-Verbose "#$($i): Already exists in $EnvVarName var: `"$PathToAdd`""
 			}
 		} # End ForEach ($AddToModulePaths)
-		$EnvVar = ($EnvVar | Sort-Object) -join ';'
-		# Remove preceeding semicolon ; leftover by -join operation
-		$EnvVar = $EnvVar -replace '^;', ''
-		# RegEx: ^;
-		#    ^   Asserts position at start of a line.
-		#    ;   Matches the semicolon ; character literally.
-		Set-EnvironmentVariable -ModulePaths $EnvVar @SetEnvVarParams
-	}
+		
+		If ($NumPathsToAdd -gt 0) {
+			Write-Verbose "Adding $NumPathsToAdd path(s) to $EnvVarName var:"
+			$SetEnvVar = $True
+		} ElseIf ($Force) {
+			Write-Verbose "(-Force parameter:) Adding $NumPathsToAdd path(s) to $EnvVarName var:"
+			$SetEnvVar = $True
+		} Else {
+			Write-Warning "No paths were added to $EnvVarName environment var."
+			$SetEnvVar = $False
+		}
+		If ($SetEnvVar) {
+			$EnvVar = ($EnvVar | Sort-Object) -join ';'
+			# Remove preceeding semicolon ; leftover by -join operation
+			$EnvVar = $EnvVar -replace '^;', ''
+			# RegEx: ^;
+			#    ^   Asserts position at start of a line.
+			#    ;   Matches the semicolon ; character literally.
+			Set-EnvironmentVariable -ModulePaths $EnvVar @SetEnvVarParams
+		}
+		Return
+	} # If ($AddToModulePaths)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
 	Start-Sleep -Milliseconds 150
@@ -812,6 +863,8 @@ Function Add-PowershellModulePath {
 		[Alias('AddToModulePath','AddToPSModulePath','AddModulePath','AddPSModulePath','AddPowershellModulePath','PSModulePaths','PSModulePath','ModulePaths','Module','PowerShell','PoSh')]
 		[String[]]$AddToModulePaths,
 		[string]$BackupFile = ".\PATH_BACKUP.txt",
+		[Alias('q','Silent','s')]
+		[switch]$Quiet,
 		[switch]$Force
 	)
 	$CommonParameters = @{
@@ -820,6 +873,7 @@ Function Add-PowershellModulePath {
 	}
 	$FuncParams = @{
 		BackupFile = $BackupFile
+		Quiet = $Quiet
 		Force = $Force
 	}
 	#Add-EnvironmentVariable -AddToModulePaths $AddToModulePaths @CommonParameters
@@ -848,11 +902,11 @@ Function Remove-EnvironmentVariable {
 	Param(
 		[Parameter(ParameterSetName = "PathVar", Position = 0)]
 		[Alias('RemovePathVar','RemovePath','PathVar','PATH')]
-		[String]$RemoveFromPathVar,
+		[String[]]$RemoveFromPathVar,
 		
 		[Parameter(ParameterSetName = "ModulePaths")]
 		[Alias('RemoveFromPSModulePath','RemovePSModulePath','RemovePSModulePaths','RemoveModulePath','PSModulePaths','PSModulePath','ModulePaths','Module','PowerShell','PoSh')]
-		[String]$RemoveFromModulePaths
+		[String[]]$RemoveFromModulePaths
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	$CommonParameters = @{
