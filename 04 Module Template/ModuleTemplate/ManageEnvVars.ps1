@@ -21,7 +21,7 @@ Function Get-EnvironmentVariable {
 	.LINK
 	https://www.tutorialspoint.com/how-to-get-environment-variable-value-using-powershell
 	#>
-	[Alias("Get-EnvironmentVar","Get-EnvVar","Get-PathVar","Get-PathEnvVar")]
+	[Alias("Get-EnvironmentVar","Get-EnvVar")]
 	#Requires -Version 3
 	[CmdletBinding(DefaultParameterSetName = 'None')]
 	Param(
@@ -34,7 +34,10 @@ Function Get-EnvironmentVariable {
 		[switch]$GetModulePaths,
 		
 		[Alias('r')]
-		[switch]$Raw
+		[switch]$Raw,
+		
+		[Alias('q','Silent','s')]
+		[switch]$Quiet
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
@@ -42,7 +45,11 @@ Function Get-EnvironmentVariable {
 	If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
 		Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
 		Try {
-			$Method = 1
+			If (!($Quiet)) {
+				$Method = 1
+			} Else {
+				$Method = 0
+			}
 			switch ($Method) {
 				0 {
 					Write-Verbose "Running RefreshEnv.cmd with method $Method"
@@ -77,7 +84,7 @@ Function Get-EnvironmentVariable {
 		switch ($Method) {
 			0 {
 				Write-Verbose 'The "PowerShell" Method:'
-				Write-Verbose "Environment variables in PowerShell are stored as PS drive (Env: )."
+				Write-Verbose "Environment variables in PowerShell are stored as PS drive (Env:_)."
 				If ($Raw) {
 					$PathVar = $env:Path
 				} Else {
@@ -159,8 +166,39 @@ Function Get-EnvironmentVariable {
 } # End of Get-EnvironmentVariable function.
 Set-Alias -Name 'Get-EnvironmentVar' -Value 'Get-EnvironmentVariable'
 Set-Alias -Name 'Get-EnvVar' -Value 'Get-EnvironmentVariable'
-Set-Alias -Name 'Get-PathVar' -Value 'Get-EnvironmentVariable'
-Set-Alias -Name 'Get-PathEnvVar' -Value 'Get-EnvironmentVariable'
+Function Get-PathVar {
+	<#
+	.SYNOPSIS
+	Alias: Get-EnvironmentVariable -GetPathVar
+	.DESCRIPTION
+	Alias: Get-EnvironmentVariable -GetPathVar
+	.NOTES
+	Alias: Get-EnvironmentVariable -GetPathVar
+	Get-Help Get-EnvironmentVariable
+	.LINK
+	Get-EnvironmentVariable
+	#>
+	[Alias("Get-PathEnvVar")]
+	[CmdletBinding()]
+	Param(
+		[Alias('r')]
+		[switch]$Raw,
+		
+		[Alias('q','Silent','s')]
+		[switch]$Quiet
+	)
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	$FuncParams = @{
+		Raw = $Raw
+		Quiet =$Quiet
+	}
+	#Get-EnvironmentVariable -GetPathVar @CommonParameters
+	Get-EnvironmentVariable -GetPathVar @FuncParams @CommonParameters
+}
+Set-Alias -Name 'Get-PathEnvVar' -Value 'Get-PathVar'
 Function Get-PowershellModulePaths {
 	<#
 	.SYNOPSIS
@@ -173,10 +211,14 @@ Function Get-PowershellModulePaths {
 	.LINK
 	Get-EnvironmentVariable
 	#>
+	[Alias('Get-PoshModulePaths','Get-PsModulePaths','Get-ModulePaths')]
 	[CmdletBinding()]
 	Param(
 		[Alias('r')]
-		[Switch]$Raw
+		[switch]$Raw,
+		
+		[Alias('q','Silent','s')]
+		[switch]$Quiet
 	)
 	$CommonParameters = @{
 		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
@@ -184,12 +226,14 @@ Function Get-PowershellModulePaths {
 	}
 	$FuncParams = @{
 		Raw = $Raw
+		Quiet =$Quiet
 	}
 	#Get-EnvironmentVariable -GetModulePaths @CommonParameters
 	Get-EnvironmentVariable -GetModulePaths @FuncParams @CommonParameters
 }
 Set-Alias -Name 'Get-PoshModulePaths' -Value 'Get-PowershellModulePaths'
 Set-Alias -Name 'Get-PsModulePaths' -Value 'Get-PowershellModulePaths'
+Set-Alias -Name 'Get-ModulePaths' -Value 'Get-PowershellModulePaths'
 #-----------------------------------------------------------------------------------------------------------------------
 
 
@@ -230,6 +274,9 @@ Function Set-EnvironmentVariable {
 		[string]$BackupFile = ".\PATH_BACKUP.txt",
 		
 		[switch]$Remove,
+		
+		[Alias('q','Silent','s')]
+		[switch]$Quiet,
 		
 		[switch]$Force
 	)
@@ -451,7 +498,11 @@ Function Set-EnvironmentVariable {
 		Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
 		Start-Sleep -Milliseconds 150
 		Try {
-			$Method = 1
+			If (!($Quiet)) {
+				$Method = 1
+			} Else {
+				$Method = 0
+			}
 			switch ($Method) {
 				0 {
 					Write-Verbose "Running RefreshEnv.cmd with method $Method"
@@ -496,6 +547,8 @@ Function Add-EnvironmentVariable {
 	Maybe some original author credits as well.
 	.EXAMPLE
 	Add-EnvironmentVariable -AddToPath "C:\Foobar\Hello world.txt" -Verbose -Debug
+	.EXAMPLE
+	Add-EnvironmentVariable "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose
 	#>
 	[Alias("Add-EnvVar")]
 	#Requires -Version 3
@@ -519,6 +572,20 @@ Function Add-EnvironmentVariable {
 		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	If ($VerbosePreference -ne 'SilentlyContinue') {
+		$GetEnvVarParams = $CommonParameters
+		$SetEnvVarParams = $CommonParameters
+		$GetEnvVarParams += @{
+			Quiet = $True
+		}
+		$SetEnvVarParams += @{
+			Quiet = $True
+		}
+	} Else {
+		$GetEnvVarParams = $CommonParameters
+		$SetEnvVarParams = $CommonParameters
+	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($AddToPathVar) {
 		$EnvVarName = "PATH"
 	} ElseIf ($AddToModulePathss) {
@@ -526,105 +593,172 @@ Function Add-EnvironmentVariable {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($AddToPathVar) {
-		$PathVar = Get-EnvironmentVariable -GetPathVar @CommonParameters
-		ForEach ($Path in $PathVar) {
+		$PathVar = Get-EnvironmentVariable -GetPathVar @GetEnvVarParams
+		Write-Verbose "$($AddToPathVar.Count) path(s) to add to $EnvVarName env var."
+		$i = 0
+		ForEach ($PathToAdd in $AddToPathVar) {
+			$i++
 			# Check if path to add already exists in env var
-			If ($Path -eq $AddToPathVar) {
-				Write-Warning "Path to add already exists in $EnvVarName environment var:`n`"$Path`""
-				#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
-				If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
-					Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
-					Try {
-						$Method = 1
-						switch ($Method) {
+			$AlreadyExists = $False
+			ForEach ($Path in $PathVar) {
+				If ($Path -eq $PathToAdd) {
+					Write-Warning "Path to add already exists in $EnvVarName environment var:`n`"$Path`""
+					#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
+					If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
+						Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
+						Try {
+							If (!($Quiet)) {
+								$Method = 1
+							} Else {
+								$Method = 0
+							}
+							switch ($Method) {
+								0 {
+									Write-Verbose "Running RefreshEnv.cmd with method $Method"
+									RefreshEnv.cmd | Out-Null
+								}
+								1 {
+									Write-Verbose "Running RefreshEnv.cmd with method $Method"
+									Start-Process RefreshEnv.cmd -NoNewWindow -Wait
+								}
+								2 {
+									Write-Verbose "Running RefreshEnv.cmd with method $Method"
+									$proc = Start-Process RefreshEnv.cmd -NoNewWindow -PassThru
+									$proc.WaitForExit()
+								}
+								Default {Throw "Please select a method (`$Method = `'$Method`') for getting PowerShell module paths."}
+							} # End swtich ($Method)
+							Write-Verbose "Finished updating env vars using RefreshEnv.cmd"
+						} Catch {
+							Write-Warning "Failed to update environment variables with the RefreshEnv.cmd command. Consider restarting this console to update env vars."
+						} # End Try/Catch RefreshEnv
+					} # End If (Get-Command RefreshEnv)
+					#https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-7.2#debugpreference
+					If ($DebugPreference -ne 'SilentlyContinue') {
+						# Ask user to continue adding duplicate path anyway if $Debug is enabled:
+						$Title = "Add duplicate path to $EnvVarName var?"
+						$Info = "Path to add already exists in $EnvVarName environment var:`n`"$Path`". Normally this function would not add this path when `$Debug switch is not used. Add duplicate path anyway?"
+						Write-Host $Info
+						# Use Ampersand & in front of letter to designate that as the choice key. E.g. "&Yes" for Y, "Y&Ellow" for E.
+						$Yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", "Add `"$Path`" to $EnvVarName env var (Not Recommended)"
+						$No = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Normal operation: Continue without adding this path."
+						#$Options = [System.Management.Automation.Host.ChoiceDescription[]] @("&Power", "&Shell", "&Quit")
+						$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Yes, $No)
+						[int]$DefaultChoice = 1
+						$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
+						switch ($Result) {
 							0 {
-								Write-Verbose "Running RefreshEnv.cmd with method $Method"
-								RefreshEnv.cmd | Out-Null
+								Write-Verbose "Option $Result chosen: Yes"
+								$AlreadyExists = $False
 							}
 							1 {
-								Write-Verbose "Running RefreshEnv.cmd with method $Method"
-								Start-Process RefreshEnv.cmd -NoNewWindow -Wait
+								Write-Verbose "Option $Result chosen: No"
+								$AlreadyExists = $True
 							}
-							2 {
-								Write-Verbose "Running RefreshEnv.cmd with method $Method"
-								$proc = Start-Process RefreshEnv.cmd -NoNewWindow -PassThru
-								$proc.WaitForExit()
-							}
-							Default {Throw "Please select a method (`$Method = `'$Method`') for getting PowerShell module paths."}
-						} # End swtich ($Method)
-						Write-Verbose "Finished updating env vars using RefreshEnv.cmd"
-					} Catch {
-						Write-Warning "Failed to update environment variables with the RefreshEnv.cmd command. Consider restarting this console to update env vars."
-					} # End Try/Catch RefreshEnv
-				} # End If (Get-Command RefreshEnv)
-				#https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-7.2#debugpreference
-				If ($DebugPreference -ne 'SilentlyContinue') {
-					# Ask user to continue if Debug switch is enabled
-					Write-Debug "Path to add already exists in $EnvVarName environment var:`n`"$Path`". Normally script would end here. Continue anyway?"
-				} Else {
-					Return
-				} # End If/Else ($Debug)
-			} # End If ($Path -eq $AddToPathVar)
-		} # End ForEach ($PathVar)
-		$PathVar += $AddToPathVar
+						} # End switch ($Result)
+					} Else {
+						$AlreadyExists = $True
+					} # End If/Else ($Debug)
+				} # End If ($Path -eq $AddToPathVar)
+			} # End ForEach ($PathVar)
+			# Finished checking if path already exists in $EnvVarName env var
+			If (!($AlreadyExists)) {
+				Write-Verbose "#$($i): Path to add: `"$PathToAdd`""
+				$PathVar += $PathToAdd
+			}
+		} # End ForEach ($AddToPathVar)
 		$PathVar = ($PathVar | Sort-Object) -join ';'
 		# Remove preceeding semicolon ; leftover by -join operation
 		$PathVar = $PathVar -replace '^;', ''
 		# RegEx: ^;
 		#    ^   Asserts position at start of a line.
 		#    ;   Matches the semicolon ; character literally.
-		Set-EnvironmentVariable -PathVar $PathVar @CommonParameters
+		Set-EnvironmentVariable -PathVar $PathVar @SetEnvVarParams
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($AddToModulePaths) {
-		$EnvVar = Get-EnvironmentVariable -GetModulePaths @CommonParameters
-		# Check if path to add already exists in env var
-		ForEach ($Path in $EnvVar) {
-			If ($Path -eq $AddToModulePaths) {
-				Write-Warning "Path to add already exists in PSModulePath environment var:`n`"$Path`""
-				#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
-				If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
-					Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
-					Try {
-						$Method = 1
-						switch ($Method) {
+		$EnvVar = Get-EnvironmentVariable -GetModulePaths @GetEnvVarParams
+		Write-Verbose "$($AddToModulePaths.Count) path(s) to add to $EnvVarName env var."
+		$i = 0
+		ForEach ($PathToAdd in $AddToModulePaths) {
+			$i++
+			# Check if path to add already exists in env var
+			$AlreadyExists = $False
+			ForEach ($Path in $EnvVar) {
+				If ($Path -eq $PathToAdd) {
+					Write-Warning "Path to add already exists in $EnvVarName environment var:`n`"$Path`""
+					#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
+					If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
+						Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
+						Try {
+							If (!($Quiet)) {
+								$Method = 1
+							} Else {
+								$Method = 0
+							}
+							switch ($Method) {
+								0 {
+									Write-Verbose "Running RefreshEnv.cmd with method $Method"
+									RefreshEnv.cmd | Out-Null
+								}
+								1 {
+									Write-Verbose "Running RefreshEnv.cmd with method $Method"
+									Start-Process RefreshEnv.cmd -NoNewWindow -Wait
+								}
+								2 {
+									Write-Verbose "Running RefreshEnv.cmd with method $Method"
+									$proc = Start-Process RefreshEnv.cmd -NoNewWindow -PassThru
+									$proc.WaitForExit()
+								}
+								Default {Throw "Please select a method (`$Method = `'$Method`') for getting PowerShell module paths."}
+							} # End swtich ($Method)
+							Write-Verbose "Finished updating env vars using RefreshEnv.cmd"
+						} Catch {
+							Write-Warning "Failed to update environment variables with the RefreshEnv.cmd command. Consider restarting this console to update env vars."
+						} # End Try/Catch RefreshEnv
+					} # End If (Get-Command RefreshEnv)
+					#https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-7.2#debugpreference
+					If ($DebugPreference -ne 'SilentlyContinue') {
+						# Ask user to continue adding duplicate path anyway if $Debug is enabled:
+						$Title = "Add duplicate path to $EnvVarName var?"
+						$Info = "Path to add already exists in $EnvVarName environment var:`n`"$Path`". Normally this function would not add this path when `$Debug switch is not used. Add duplicate path anyway?"
+						Write-Host $Info
+						# Use Ampersand & in front of letter to designate that as the choice key. E.g. "&Yes" for Y, "Y&Ellow" for E.
+						$Yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", "Add `"$Path`" to $EnvVarName env var (Not Recommended)"
+						$No = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Normal operation: Continue without adding this path."
+						#$Options = [System.Management.Automation.Host.ChoiceDescription[]] @("&Power", "&Shell", "&Quit")
+						$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Yes, $No)
+						[int]$DefaultChoice = 1
+						$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
+						switch ($Result) {
 							0 {
-								Write-Verbose "Running RefreshEnv.cmd with method $Method"
-								RefreshEnv.cmd | Out-Null
+								Write-Verbose "Option $Result chosen: Yes"
+								$AlreadyExists = $False
 							}
 							1 {
-								Write-Verbose "Running RefreshEnv.cmd with method $Method"
-								Start-Process RefreshEnv.cmd -NoNewWindow -Wait
+								Write-Verbose "Option $Result chosen: No"
+								$AlreadyExists = $True
 							}
-							2 {
-								Write-Verbose "Running RefreshEnv.cmd with method $Method"
-								$proc = Start-Process RefreshEnv.cmd -NoNewWindow -PassThru
-								$proc.WaitForExit()
-							}
-							Default {Throw "Please select a method (`$Method = `'$Method`') for getting PowerShell module paths."}
-						} # End swtich ($Method)
-						Write-Verbose "Finished updating env vars using RefreshEnv.cmd"
-					} Catch {
-						Write-Warning "Failed to update environment variables with the RefreshEnv.cmd command. Consider restarting this console to update env vars."
-					} # End Try/Catch RefreshEnv
-				} # End If (Get-Command RefreshEnv)
-				#https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables?view=powershell-7.2#debugpreference
-				If ($DebugPreference -ne 'SilentlyContinue') {
-					# Ask user to continue if Debug switch is enabled
-					Write-Debug "Path to add already exists in PATH environment var:`n`"$Path`". Normally script would end here. Continue anyway?"
-				} Else {
-					Return
-				} # End If/Else ($Debug)
-			} # End If ($Path -eq $AddToModulePaths)
-		} # End ForEach ($EnvVar)
-		$EnvVar += $AddToModulePaths
+						} # End switch ($Result)
+					} Else {
+						$AlreadyExists = $True
+					} # End If/Else ($Debug)
+				} # End If ($Path -eq $AddToModulePaths)
+			} # End ForEach ($EnvVar)
+			
+			# Finished checking if path already exists in $EnvVarName env var
+			If (!($AlreadyExists)) {
+				Write-Verbose "#$($i): Path to add: `"$PathToAdd`""
+				$EnvVar += $PathToAdd
+			}
+		} # End ForEach ($AddToModulePaths)
 		$EnvVar = ($EnvVar | Sort-Object) -join ';'
 		# Remove preceeding semicolon ; leftover by -join operation
 		$EnvVar = $EnvVar -replace '^;', ''
 		# RegEx: ^;
 		#    ^   Asserts position at start of a line.
 		#    ;   Matches the semicolon ; character literally.
-		Set-EnvironmentVariable -ModulePaths $EnvVar @CommonParameters
+		Set-EnvironmentVariable -ModulePaths $EnvVar @SetEnvVarParams
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
