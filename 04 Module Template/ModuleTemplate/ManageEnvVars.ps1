@@ -974,6 +974,7 @@ Function Remove-EnvironmentVariable {
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($RemoveFromPathVar) {
 		$PathVar = Get-EnvironmentVariable -GetPathVar @GetEnvVarParams
+		Write-Verbose "$($PathVar.Count) path(s) in $EnvVarName env var."
 		$CountPathsToRemove = $RemoveFromPathVar.Count
 		Write-Verbose "$($RemoveFromPathVar.Count) path(s) to remove from $EnvVarName env var."
 		$NumPathsToRemove = 0
@@ -981,7 +982,6 @@ Function Remove-EnvironmentVariable {
 		$j = 0
 		ForEach ($PathToRemove in $RemoveFromPathVar) {
 			$j++
-			# Check if there are duplicate paths to remove:
 			$i = 0
 			$PathRemoved = $False
 			ForEach ($Path in $PathVar) {
@@ -1005,6 +1005,8 @@ Function Remove-EnvironmentVariable {
 		} # End ForEach ($PathToRemove in $RemoveFromPathVar)
 		
 		$PathVar = $NewEnvVar
+		Write-Verbose "$($PathVar.Count) path(s) in new $EnvVarName env var."
+		
 		If ($NumPathsToRemove -gt 0) {
 			Write-Verbose "Removing $NumPathsToRemove path(s) from $EnvVarName var:"
 			$SetEnvVar = $True
@@ -1028,6 +1030,8 @@ Function Remove-EnvironmentVariable {
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($RemoveFromModulePaths) {
 		$EnvVar = Get-EnvironmentVariable -GetModulePaths @GetEnvVarParams
+		Write-Verbose "$($PathVar.Count) path(s) in $EnvVarName env var."
+		$CountPathsToRemove = $RemoveFromPathVar.Count
 		Write-Verbose "$($RemoveFromModulePaths.Count) path(s) to remove from $EnvVarName env var."
 		$NumPathsToRemove = 0
 		$NewEnvVar = @()
@@ -1047,6 +1051,7 @@ Function Remove-EnvironmentVariable {
 		} # End ForEach ($PathToRemove in $RemoveFromModulePaths)
 		
 		$EnvVar = $NewEnvVar
+		Write-Verbose "$($PathVar.Count) path(s) in new $EnvVarName env var."
 		
 		If ($NumPathsToRemove -gt 0) {
 			Write-Verbose "Removing $NumPathsToRemove path(s) from $EnvVarName var:"
