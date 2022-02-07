@@ -290,10 +290,6 @@ Function Set-EnvironmentVariable {
 	# Check if given BackupFile path is a filename, or full path.
 	$PathPrefix = Split-Path -Path $BackupFile -Parent
 	
-	If ($PathPrefix -ne "" -And $null -ne $PathPrefix) {
-		Test-Path -Path $PathPrefix -PathType Container
-	}
-	
 	# Check if given $BackupFile string is a file
 	$PartialPath = $False
 	If ($PathPrefix -eq "." -Or $PathPrefix -eq "\" -Or $PathPrefix -eq "" -Or $null -eq $PathPrefix) {
@@ -380,7 +376,6 @@ Function Set-EnvironmentVariable {
 		# Check if this BackupFile_old file already exists:
 		If ((Test-Path -Path $NewName)) {
 			Write-Warning "Old backup file already exists: `"$NewName`""
-			Write-Verbose "Removing old backup file before generating new one: `"$NewName`""
 			Write-Warning "Removing old backup file before generating new one: `"$NewName`""
 			Write-Debug "Removing old backup file before generating new one: `"$NewName`""
 			Remove-Item -Path $NewName
@@ -469,19 +464,41 @@ Function Set-EnvironmentVariable {
 	$EnvVarPaths = ($EnvVarPath -split ";").Count
 	Write-Verbose "`$EnvVarPath.Length = $($EnvVarPath.Length) ; `$EnvVarPaths(Count) = $EnvVarPaths"
 	
-	If ($EnvVarPath -notlike '*;*' -And !($Force)) {
+	If ($EnvVarPath -notlike '*;*') {
 		Write-Host "CAUTION: No ;" -ForegroundColor Red -BackgroundColor Black
-		Write-Warning "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened.`n`tOriginal $($EnvVarName):`n`t`t- $OriginalPath`n`tNew $($EnvVarName):`n`t`t- $EnvVarPath"
+		Write-Warning "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened.`n`tOriginal $($EnvVarName): $($OriginalPath.Length) length ; $OriginalPaths count`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length) length ; $EnvVarPaths count`n`t`t- $EnvVarPath"
 		#Write-Warning "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
-		Write-Error "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
-		Throw "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
+		If (!($Force)) {
+			Write-Error "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
+			Throw "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
+		}
 	}
 	
-	If ( ($EnvVarPath.Length) -lt ($OriginalPath.Length) -And !($Remove) -And !($Force) ) {
-		Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName.`n`tOriginal $($EnvVarName): $($OriginalPath.Length)`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length)`n`t`t- $EnvVarPath"
+	If ( ($EnvVarPath.Length) -lt ($OriginalPath.Length) -And !($Remove) ) {
+		Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName.`n`tOriginal $($EnvVarName): $($OriginalPath.Length) length ; $OriginalPaths count`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length) length ; $EnvVarPaths count`n`t`t- $EnvVarPath"
 		#Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
-		Write-Error "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future,d use the -Remove parameter when removing data from $EnvVarName."
-		Throw "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+		If (!($Force)) {
+			Write-Error "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future,d use the -Remove parameter when removing data from $EnvVarName."
+			Throw "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+		}
+	}
+	
+	If ( ($EnvVarPath.Length) -lt ($OriginalPath.Length) -And !($Remove) ) {
+		Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName.`n`tOriginal $($EnvVarName): $($OriginalPath.Length) length ; $OriginalPaths count`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length) length ; $EnvVarPaths count`n`t`t- $EnvVarPath"
+		#Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+		If (!($Force)) {
+			Write-Error "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future,d use the -Remove parameter when removing data from $EnvVarName."
+			Throw "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+		}
+	}
+	
+	If ( ($EnvVarPath.Length) -gt ($OriginalPath.Length) -And $Remove ) {
+		Write-Warning "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Is this intentional? You will be ADDING data from the $EnvVarName variable.`n`tOriginal $($EnvVarName): $($OriginalPath.Length) length ; $OriginalPaths count`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length) length ; $EnvVarPaths count`n`t`t- $EnvVarPath"
+		#Write-Warning "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Is this intentional? You will be ADDING data from the $EnvVarName variable.."
+		If (!($Force)) {
+			Write-Error "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Is this intentional? You will be ADDING data from the $EnvVarName variable."
+			Throw "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Is this intentional? You will be ADDING data from the $EnvVarName variable."
+		}
 	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -550,7 +567,7 @@ Function Add-EnvironmentVariable {
 	.EXAMPLE
 	Add-EnvironmentVariable -AddToPath "C:\Foobar\Hello world.txt" -Verbose -Debug
 	.EXAMPLE
-	Add-EnvironmentVariable "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose
+	Add-EnvironmentVariable "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
 	#>
 	[Alias("Add-EnvVar")]
 	#Requires -Version 3
@@ -586,6 +603,12 @@ Function Add-EnvironmentVariable {
 		$GetEnvVarParams += @{Quiet = $Quiet}
 		$SetEnvVarParams += @{Quiet = $Quiet}
 	}
+	If ($BackupFile) {
+		$SetEnvVarParams += @{BackupFile = $BackupFile}
+	}
+	If ($Force) {
+		$SetEnvVarParams += @{Force = $Force}
+	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($AddToPathVar) {
 		$EnvVarName = "PATH"
@@ -605,7 +628,7 @@ Function Add-EnvironmentVariable {
 			$DuplicateString = ""
 			ForEach ($Path in $PathVar) {
 				If ($Path -eq $PathToAdd) {
-					Write-Warning "Path to add already exists in $EnvVarName environment var:`n`"$Path`""
+					Write-Warning "#$($i) Path to add already exists in $EnvVarName environment var:`n`"$Path`""
 					#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
 					If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
 						Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
@@ -699,7 +722,6 @@ Function Add-EnvironmentVariable {
 			#    ;   Matches the semicolon ; character literally.
 			Set-EnvironmentVariable -PathVar $PathVar @SetEnvVarParams
 		}
-		Return
 	} # End If ($AddToPathVar)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($AddToModulePaths) {
@@ -714,7 +736,7 @@ Function Add-EnvironmentVariable {
 			$DuplicateString = ""
 			ForEach ($Path in $EnvVar) {
 				If ($Path -eq $PathToAdd) {
-					Write-Warning "Path to add already exists in $EnvVarName environment var:`n`"$Path`""
+					Write-Warning "#$($i) Path to add already exists in $EnvVarName environment var:`n`"$Path`""
 					#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
 					If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
 						Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
@@ -809,7 +831,6 @@ Function Add-EnvironmentVariable {
 			#    ;   Matches the semicolon ; character literally.
 			Set-EnvironmentVariable -ModulePaths $EnvVar @SetEnvVarParams
 		}
-		Return
 	} # If ($AddToModulePaths)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
@@ -817,7 +838,11 @@ Function Add-EnvironmentVariable {
 	If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
 		Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
 		Try {
-			$Method = 1
+			If (!($Quiet)) {
+				$Method = 1
+			} Else {
+				$Method = 0
+			}
 			switch ($Method) {
 				0 {
 					Write-Verbose "Running RefreshEnv.cmd with method $Method"
@@ -895,6 +920,10 @@ Function Remove-EnvironmentVariable {
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
 	
 	Maybe some original author credits as well.
+	.EXAMPLE
+	Remove-EnvironmentVariable -RemoveFromPathVar "C:\Foobar\Hello world.txt" -Verbose -Debug
+	.EXAMPLE
+	Remove-EnvironmentVariable "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
 	#>
 	[Alias("Remove-EnvVar")]
 	#Requires -Version 3
@@ -906,12 +935,35 @@ Function Remove-EnvironmentVariable {
 		
 		[Parameter(ParameterSetName = "ModulePaths")]
 		[Alias('RemoveFromPSModulePath','RemovePSModulePath','RemovePSModulePaths','RemoveModulePath','PSModulePaths','PSModulePath','ModulePaths','Module','PowerShell','PoSh')]
-		[String[]]$RemoveFromModulePaths
+		[String[]]$RemoveFromModulePaths,
+		
+		[string]$BackupFile = ".\PATH_BACKUP.txt",
+		
+		[Alias('q','Silent','s')]
+		[switch]$Quiet,
+		
+		[switch]$Force
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	$CommonParameters = @{
 		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
 		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$GetEnvVarParams = $CommonParameters
+	$SetEnvVarParams = $CommonParameters
+	If ($VerbosePreference -ne 'SilentlyContinue') {
+		$GetEnvVarParams += @{Quiet = $True}
+		$SetEnvVarParams += @{Quiet = $True}
+	} ElseIf ($Quiet) {
+		$GetEnvVarParams += @{Quiet = $Quiet}
+		$SetEnvVarParams += @{Quiet = $Quiet}
+	}
+	If ($BackupFile) {
+		$SetEnvVarParams += @{BackupFile = $BackupFile}
+	}
+	If ($Force) {
+		$SetEnvVarParams += @{Force = $Force}
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($RemoveFromPathVar) {
@@ -921,59 +973,112 @@ Function Remove-EnvironmentVariable {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($RemoveFromPathVar) {
-		$PathVar = Get-EnvironmentVariable -GetPathVar @CommonParameters
-		$i = 0
+		$PathVar = Get-EnvironmentVariable -GetPathVar @GetEnvVarParams
+		$CountPathsToRemove = $RemoveFromPathVar.Count
+		Write-Verbose "$($RemoveFromPathVar.Count) path(s) to remove from $EnvVarName env var."
+		$NumPathsToRemove = 0
 		$NewEnvVar = @()
-		ForEach ($Path in $PathVar) {
-			If ($Path -eq $RemoveFromPathVar) {
-				$i++
-				If ($i -gt 1) {
-					Write-Warning "$i duplicate paths removed from $EnvVarName env var:`n`"$Path`""
+		$j = 0
+		ForEach ($PathToRemove in $RemoveFromPathVar) {
+			$j++
+			# Check if there are duplicate paths to remove:
+			$i = 0
+			$PathRemoved = $False
+			ForEach ($Path in $PathVar) {
+				If ($Path -eq $PathToRemove) {
+					$i++
+					$PathRemoved = $True
+					If ($i -gt 1) {
+						Write-Warning "$i duplicate paths removed from $EnvVarName env var:`n`"$Path`""
+					} Else {
+						Write-Verbose "Removing `$Path from list: `"$Path`""
+						$NumPathsToRemove++
+					}
+				} Else {
+					Write-Verbose "$($j): path not to be removed: `"$Path`""
+					$NewEnvVar += $Path
 				}
-			} Else {
-				$NewEnvVar += $Path
+			} # End ForEach ($Path in $PathVar)
+			If ($i -eq $CountPathsToRemove -And !($PathRemoved)) {
+				Write-Warning "Path #$($j): $i/$($CountPathsToRemove): Path not found in $EnvVarName var: `"$PathToRemove`""
 			}
-		}
+		} # End ForEach ($PathToRemove in $RemoveFromPathVar)
+		
 		$PathVar = $NewEnvVar
-		$PathVar = ($PathVar | Sort-Object) -join ';'
-		# Remove preceeding semicolon ; leftover by -join operation
-		$PathVar = $PathVar -replace '^;', ''
-		# RegEx: ^;
-		#    ^   Asserts position at start of a line.
-		#    ;   Matches the semicolon ; character literally.
-		Set-EnvironmentVariable -Remove -PathVar $PathVar @CommonParameters
-	}
+		If ($NumPathsToRemove -gt 0) {
+			Write-Verbose "Removing $NumPathsToRemove path(s) from $EnvVarName var:"
+			$SetEnvVar = $True
+		} ElseIf ($Force) {
+			Write-Verbose "(-Force parameter:) Removing $NumPathsToRemove path(s) from $EnvVarName var:"
+			$SetEnvVar = $True
+		} Else {
+			Write-Warning "No paths were removed from $EnvVarName environment var."
+			$SetEnvVar = $False
+		}
+		If ($SetEnvVar) {
+			$PathVar = ($PathVar | Sort-Object) -join ';'
+			# Remove preceeding semicolon ; leftover by -join operation
+			$PathVar = $PathVar -replace '^;', ''
+			# RegEx: ^;
+			#    ^   Asserts position at start of a line.
+			#    ;   Matches the semicolon ; character literally.
+			Set-EnvironmentVariable -Remove -PathVar $PathVar @SetEnvVarParams
+		}
+	} # End If ($RemoveFromPathVar)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($RemoveFromModulePaths) {
-		$EnvVar = Get-EnvironmentVariable -GetModulePaths @CommonParameters
-		$i = 0
+		$EnvVar = Get-EnvironmentVariable -GetModulePaths @GetEnvVarParams
+		Write-Verbose "$($RemoveFromModulePaths.Count) path(s) to remove from $EnvVarName env var."
+		$NumPathsToRemove = 0
 		$NewEnvVar = @()
-		ForEach ($Path in $EnvVar) {
-			If ($Path -eq $RemoveFromModulePaths) {
-				$i++
-				If ($i -gt 1) {
-					Write-Warning "$i duplicate paths removed from $EnvVarName env var:`n`"$Path`""
+		ForEach ($PathToRemove in $RemoveFromModulePaths) {
+			# Check if there are duplicate paths to remove:
+			$i = 0
+			ForEach ($Path in $EnvVar) {
+				If ($Path -eq $PathToRemove) {
+					$i++
+					If ($i -gt 1) {
+						Write-Warning "$i duplicate paths removed from $EnvVarName env var:`n`"$Path`""
+					}
+				} Else {
+					$NewEnvVar += $Path
 				}
-			} Else {
-				$NewEnvVar += $Path
-			}
-		}
+			} # End ForEach ($Path in $EnvVar)
+		} # End ForEach ($PathToRemove in $RemoveFromModulePaths)
+		
 		$EnvVar = $NewEnvVar
-		$EnvVar = ($EnvVar | Sort-Object) -join ';'
-		# Remove preceeding semicolon ; leftover by -join operation
-		$EnvVar = $EnvVar -replace '^;', ''
-		# RegEx: ^;
-		#    ^   Asserts position at start of a line.
-		#    ;   Matches the semicolon ; character literally.
-		Set-EnvironmentVariable -Remove -ModulePaths $EnvVar @CommonParameters
-	}
+		
+		If ($NumPathsToRemove -gt 0) {
+			Write-Verbose "Removing $NumPathsToRemove path(s) from $EnvVarName var:"
+			$SetEnvVar = $True
+		} ElseIf ($Force) {
+			Write-Verbose "(-Force parameter:) Removing $NumPathsToRemove path(s) from $EnvVarName var:"
+			$SetEnvVar = $True
+		} Else {
+			Write-Warning "No paths were removed from $EnvVarName environment var."
+			$SetEnvVar = $False
+		}
+		If ($SetEnvVar) {
+			$EnvVar = ($EnvVar | Sort-Object) -join ';'
+			# Remove preceeding semicolon ; leftover by -join operation
+			$EnvVar = $EnvVar -replace '^;', ''
+			# RegEx: ^;
+			#    ^   Asserts position at start of a line.
+			#    ;   Matches the semicolon ; character literally.
+			Set-EnvironmentVariable -Remove -ModulePaths $EnvVar @SetEnvVarParams
+		}
+	} # End If ($RemoveFromModulePaths)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	#https://www.delftstack.com/howto/powershell/wait-for-each-command-to-finish-in-powershell/
 	Start-Sleep -Milliseconds 150
 	If ((Get-Command 'RefreshEnv.cmd') -Or (Get-Command 'RefreshEnv')) {
 		Write-Verbose "Running RefreshEnv.cmd command to update env vars without restarting console."
 		Try {
-			$Method = 1
+			If (!($Quiet)) {
+				$Method = 1
+			} Else {
+				$Method = 0
+			}
 			switch ($Method) {
 				0 {
 					Write-Verbose "Running RefreshEnv.cmd with method $Method"
