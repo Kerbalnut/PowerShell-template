@@ -278,7 +278,9 @@ Function Set-EnvironmentVariable {
 		[Alias('q','Silent','s')]
 		[switch]$Quiet,
 		
-		[switch]$Force
+		[switch]$Force,
+		
+		[switch]$WhatIf
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	$CommonParameters = @{
@@ -505,10 +507,19 @@ Function Set-EnvironmentVariable {
 	
 	Write-Verbose "Setting Environment Var: $EnvVarName"
 	Write-Debug "Setting Environment Var: $EnvVarName`n`tOriginal $($EnvVarName): $($OriginalPath.Length) characters ; $OriginalPaths items`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length) characters ; $EnvVarPaths items`n`t`t- $EnvVarPath"
-	If ($PathVar) {
-		[Environment]::SetEnvironmentVariable("PATH", $EnvVarPath, [EnvironmentVariableTarget]::Machine)
-	} ElseIf ($ModulePaths) {
-		[Environment]::SetEnvironmentVariable("PSModulePath", $EnvVarPath, [EnvironmentVariableTarget]::Machine)
+	If ($WhatIf) {
+		If ($PathVar) {
+			$EnvVarNameWI = "PATH"
+		} ElseIf ($ModulePaths) {
+			$EnvVarNameWI = "PSModulePath"
+		}
+		Write-Host "[What-If]: Setting $EnvVarNameWI environment variable. `"$EnvVarPath`""
+	} Else {
+		If ($PathVar) {
+			[Environment]::SetEnvironmentVariable("PATH", $EnvVarPath, [EnvironmentVariableTarget]::Machine)
+		} ElseIf ($ModulePaths) {
+			[Environment]::SetEnvironmentVariable("PSModulePath", $EnvVarPath, [EnvironmentVariableTarget]::Machine)
+		}
 	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
