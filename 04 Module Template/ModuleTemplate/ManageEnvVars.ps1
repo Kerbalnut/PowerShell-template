@@ -881,6 +881,8 @@ Function Add-PowershellModulePath {
 	Get-Help Add-EnvironmentVariable
 	.LINK
 	Add-EnvironmentVariable
+	.EXAMPLE
+	Add-PowershellModulePath "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
 	#>
 	[CmdletBinding()]
 	Param(
@@ -921,9 +923,9 @@ Function Remove-EnvironmentVariable {
 	
 	Maybe some original author credits as well.
 	.EXAMPLE
-	Remove-EnvironmentVariable -RemoveFromPathVar "C:\Foobar\Hello world.txt" -Verbose -Debug
+	Remove-EnvironmentVariable -RemoveFromPathVar "C:\Demo\path" -Verbose -Debug
 	.EXAMPLE
-	Remove-EnvironmentVariable "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
+	Remove-EnvironmentVariable "C:\Demo\path", "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt" -Verbose -Force
 	#>
 	[Alias("Remove-EnvVar")]
 	#Requires -Version 3
@@ -979,30 +981,32 @@ Function Remove-EnvironmentVariable {
 		Write-Verbose "$($RemoveFromPathVar.Count) path(s) to remove from $EnvVarName env var."
 		$NumPathsToRemove = 0
 		$NewEnvVar = @()
-		$j = 0
-		ForEach ($PathToRemove in $RemoveFromPathVar) {
-			$j++
-			$i = 0
+		$i = 0
+		ForEach ($Path in $PathVar) {
+			$i++
+			$j = 0
 			$PathRemoved = $False
-			ForEach ($Path in $PathVar) {
+			ForEach ($PathToRemove in $RemoveFromPathVar) {
 				If ($Path -eq $PathToRemove) {
-					$i++
+					$j++
 					$PathRemoved = $True
-					If ($i -gt 1) {
-						Write-Warning "$i duplicate paths removed from $EnvVarName env var:`n`"$Path`""
+					If ($j -gt 1) {
+						Write-Warning "$j duplicate paths removed from $EnvVarName env var: `"$Path`""
 					} Else {
 						Write-Verbose "Removing `$Path from list: `"$Path`""
 						$NumPathsToRemove++
 					}
 				} Else {
-					Write-Verbose "$($j): path not to be removed: `"$Path`""
-					$NewEnvVar += $Path
+					Write-Verbose "$($i): path not to be removed: `"$Path`""
 				}
-			} # End ForEach ($Path in $PathVar)
-			If ($i -eq $CountPathsToRemove -And !($PathRemoved)) {
-				Write-Warning "Path #$($j): $i/$($CountPathsToRemove): Path not found in $EnvVarName var: `"$PathToRemove`""
+			} # End ForEach ($PathToRemove in $RemoveFromPathVar)
+			If (!($PathRemoved)) {
+				$NewEnvVar += $Path
 			}
-		} # End ForEach ($PathToRemove in $RemoveFromPathVar)
+			If ($j -eq $CountPathsToRemove -And !($PathRemoved)) {
+				Write-Warning "Path #$($i): $j/$($CountPathsToRemove): Path not found in $EnvVarName var: `"$PathToRemove`""
+			}
+		} # End ForEach ($Path in $PathVar)
 		
 		$PathVar = $NewEnvVar
 		Write-Verbose "$($PathVar.Count) path(s) in new $EnvVarName env var."
@@ -1122,6 +1126,8 @@ Function Remove-PowershellModulePath {
 	Get-Help Remove-EnvironmentVariable
 	.LINK
 	Remove-EnvironmentVariable
+	.EXAMPLE
+	Remove-PowershellModulePath "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
 	#>
 	[CmdletBinding()]
 	Param(
