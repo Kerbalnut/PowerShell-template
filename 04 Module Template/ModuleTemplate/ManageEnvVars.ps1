@@ -193,7 +193,7 @@ Function Get-PathVar {
 	}
 	$FuncParams = @{
 		Raw = $Raw
-		Quiet =$Quiet
+		Quiet = $Quiet
 	}
 	#Get-EnvironmentVariable -GetPathVar @CommonParameters
 	Get-EnvironmentVariable -GetPathVar @FuncParams @CommonParameters
@@ -226,7 +226,7 @@ Function Get-PowershellModulePaths {
 	}
 	$FuncParams = @{
 		Raw = $Raw
-		Quiet =$Quiet
+		Quiet = $Quiet
 	}
 	#Get-EnvironmentVariable -GetModulePaths @CommonParameters
 	Get-EnvironmentVariable -GetModulePaths @FuncParams @CommonParameters
@@ -870,6 +870,43 @@ Function Add-EnvironmentVariable {
 	Return
 } # End of Add-EnvironmentVariable function.
 Set-Alias -Name 'Add-EnvVar' -Value 'Add-EnvironmentVariable'
+Function Add-PathVar {
+	<#
+	.SYNOPSIS
+	Alias: Add-EnvironmentVariable -AddToPathVar
+	.DESCRIPTION
+	Alias: Add-EnvironmentVariable -AddToPathVar
+	.NOTES
+	Alias: Add-EnvironmentVariable -AddToPathVar
+	Get-Help Add-EnvironmentVariable
+	.LINK
+	Add-EnvironmentVariable
+	#>
+	[Alias("Add-PathEnvVar")]
+	[CmdletBinding()]
+	Param(
+		[Parameter(Position = 0)]
+		[Alias('AddPathVar','PathVar','PATH')]
+		[String[]]$AddToPathVar,
+		[string]$BackupFile = ".\PATH_BACKUP.txt",
+		[Alias('q','Silent','s')]
+		[switch]$Quiet,
+		[switch]$Force
+	)
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	$FuncParams = @{
+		BackupFile = $BackupFile
+		Quiet = $Quiet
+		Force = $Force
+	}
+	#Add-EnvironmentVariable -AddToPathVar $AddToPathVar @CommonParameters
+	Add-EnvironmentVariable -AddToPathVar $AddToPathVar @FuncParams @CommonParameters
+} # End Function Add-PathVar
+Set-Alias -Name 'Add-PathEnvVar' -Value 'Add-PathVar'
+Set-Alias -Name 'Add-ToPathVar' -Value 'Add-PathVar'
 Function Add-PowershellModulePath {
 	<#
 	.SYNOPSIS
@@ -886,7 +923,7 @@ Function Add-PowershellModulePath {
 	#>
 	[CmdletBinding()]
 	Param(
-		[Parameter(ParameterSetName = "ModulePaths", Position = 0)]
+		[Parameter(Position = 0)]
 		[Alias('AddToModulePath','AddToPSModulePath','AddModulePath','AddPSModulePath','AddPowershellModulePath','PSModulePaths','PSModulePath','ModulePaths','Module','PowerShell','PoSh')]
 		[String[]]$AddToModulePaths,
 		[string]$BackupFile = ".\PATH_BACKUP.txt",
@@ -905,9 +942,10 @@ Function Add-PowershellModulePath {
 	}
 	#Add-EnvironmentVariable -AddToModulePaths $AddToModulePaths @CommonParameters
 	Add-EnvironmentVariable -AddToModulePaths $AddToModulePaths @CommonParameters @FuncParams
-}
+} # End Function Add-PowershellModulePath
 Set-Alias -Name 'Add-PoshModulePath' -Value 'Add-PowershellModulePath'
 Set-Alias -Name 'Add-PsModulePath' -Value 'Add-PowershellModulePath'
+Set-Alias -Name 'Add-ToPowershellModulePath' -Value 'Add-PowershellModulePath'
 #-----------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -944,7 +982,9 @@ Function Remove-EnvironmentVariable {
 		[Alias('q','Silent','s')]
 		[switch]$Quiet,
 		
-		[switch]$Force
+		[switch]$Force,
+		
+		[switch]$WhatIf
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	$CommonParameters = @{
@@ -967,6 +1007,9 @@ Function Remove-EnvironmentVariable {
 	If ($Force) {
 		$SetEnvVarParams += @{Force = $Force}
 	}
+	If ($WhatIf) {
+		$SetEnvVarParams += @{WhatIf = $WhatIf}
+	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($RemoveFromPathVar) {
 		$EnvVarName = "PATH"
@@ -981,27 +1024,30 @@ Function Remove-EnvironmentVariable {
 		Write-Verbose "$($RemoveFromPathVar.Count) path(s) to remove from $EnvVarName env var."
 		$NumPathsToRemove = 0
 		$NewEnvVar = @()
+		$RemovedPaths = @()
 		$i = 0
+		$j = 0
+		$k = 0
 		ForEach ($Path in $PathVar) {
 			$i++
-			$j = 0
 			$PathRemoved = $False
 			ForEach ($PathToRemove in $RemoveFromPathVar) {
 				If ($Path -eq $PathToRemove) {
 					$j++
 					$PathRemoved = $True
-					If ($j -gt 1) {
-						Write-Warning "$j duplicate paths removed from $EnvVarName env var: `"$Path`""
-					} Else {
-						Write-Verbose "Removing `$Path from list: `"$Path`""
-						$NumPathsToRemove++
+					ForEach ($RemovedPath in $RemovedPaths) {
+						If ($RemovedPath -eq $Path) {
+							Write-Warning "$k duplicate paths removed from $EnvVarName env var: `"$Path`""
+						}
 					}
-				} Else {
-					Write-Verbose "$($i): path not to be removed: `"$Path`""
+					Write-Verbose "Removing `$Path from list: `"$Path`""
+					$NumPathsToRemove++
 				}
 			} # End ForEach ($PathToRemove in $RemoveFromPathVar)
 			If (!($PathRemoved)) {
 				$NewEnvVar += $Path
+			} Else {
+				Write-Verbose "$($i): path not to be removed: `"$Path`""
 			}
 			If ($j -eq $CountPathsToRemove -And !($PathRemoved)) {
 				Write-Warning "Path #$($i): $j/$($CountPathsToRemove): Path not found in $EnvVarName var: `"$PathToRemove`""
@@ -1115,6 +1161,45 @@ Function Remove-EnvironmentVariable {
 	Return
 } # End of Remove-EnvironmentVariable function.
 Set-Alias -Name 'Remove-EnvVar' -Value 'Remove-EnvironmentVariable'
+Function Remove-PathVar {
+	<#
+	.SYNOPSIS
+	Alias: Remove-EnvironmentVariable -RemoveFromPathVar "<path_to_Remove>"
+	.DESCRIPTION
+	Alias: Remove-EnvironmentVariable -RemoveFromPathVar "<path_to_Remove>"
+	.NOTES
+	Alias: Remove-EnvironmentVariable -RemoveFromPathVar "<path_to_Remove>"
+	Get-Help Remove-EnvironmentVariable
+	.LINK
+	Remove-EnvironmentVariable
+	.EXAMPLE
+	Remove-PathVar "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
+	#>
+	[CmdletBinding()]
+	Param(
+		[Parameter(Position = 0)]
+		[Alias('RemovePathVar','RemovePath','PathVar','PATH')]
+		[String[]]$RemoveFromPathVar,
+		[string]$BackupFile = ".\PATH_BACKUP.txt",
+		[Alias('q','Silent','s')]
+		[switch]$Quiet,
+		[switch]$Force,
+		[switch]$WhatIf
+	)
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	$FuncParams = @{
+		BackupFile = $BackupFile
+		Quiet = $Quiet
+		Force = $Force
+		WhatIf = $WhatIf
+	}
+	Remove-EnvironmentVariable -RemoveFromPathVar $RemoveFromPathVar @FuncParams @CommonParameters
+} # End Function Remove-PathVar
+Set-Alias -Name 'Remove-PathEnvVar' -Value 'Remove-PathVar'
+Set-Alias -Name 'Remove-FromPathVar' -Value 'Remove-PathVar'
 Function Remove-PowershellModulePath {
 	<#
 	.SYNOPSIS
@@ -1131,16 +1216,27 @@ Function Remove-PowershellModulePath {
 	#>
 	[CmdletBinding()]
 	Param(
-		[Parameter(ParameterSetName = "ModulePaths", Position = 0)]
+		[Parameter(Position = 0)]
 		[Alias('RemoveFromModulePath','RemoveFromPSModulePath','RemovePSModulePath','PSModulePaths','PSModulePath','RemoveModulePath','ModulePaths','Module','PowerShell','PoSh')]
-		[String]$RemoveFromModulePaths
+		[String]$RemoveFromModulePaths,
+		[string]$BackupFile = ".\PATH_BACKUP.txt",
+		[Alias('q','Silent','s')]
+		[switch]$Quiet,
+		[switch]$Force,
+		[switch]$WhatIf
 	)
 	$CommonParameters = @{
 		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
 		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 	}
+	$FuncParams = @{
+		BackupFile = $BackupFile
+		Quiet = $Quiet
+		Force = $Force
+		WhatIf = $WhatIf
+	}
 	Remove-EnvironmentVariable -RemoveFromModulePaths $RemoveFromModulePaths @CommonParameters
-}
+} # End Function Remove-PowershellModulePath
 Set-Alias -Name 'Remove-PoshModulePath' -Value 'Remove-PowershellModulePath'
 Set-Alias -Name 'Remove-PsModulePath' -Value 'Remove-PowershellModulePath'
 #-----------------------------------------------------------------------------------------------------------------------
