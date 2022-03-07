@@ -1292,12 +1292,14 @@ Function New-TaskTrackingInitiativeTEST {
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
-	[CmdletBinding()]
+	#[CmdletBinding()]
+	[CmdletBinding(DefaultParameterSetName = 'None')]
 	Param(
-		[Parameter(Mandatory = $True, Position = 0,
+		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
-		           ValueFromPipelineByPropertyName = $True,
-		           HelpMessage = "Path to ...")]
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "Path")]
 		[ValidateNotNullOrEmpty()]
 		[Alias('ProjectPath','p')]
 		[String]$Path

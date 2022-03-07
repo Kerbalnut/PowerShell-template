@@ -11,19 +11,21 @@ Function Get-ModuleCommandInfo {
 	
 	Maybe some original author credits as well.
 	.EXAMPLE
-	Get-ModuleCommandInfo -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	Get-ModuleCommandInfo -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1" -Verbose
 	
 	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
 	#>
 	[CmdletBinding()]
 	Param(
-		[Parameter(Mandatory = $True, Position = 0,
+		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
-		           ValueFromPipelineByPropertyName = $True,
+		           ValueFromPipelineByPropertyName = $True, 
 		           HelpMessage = "Path to ...")]
 		[ValidateNotNullOrEmpty()]
-		[Alias('ProjectPath','p')]
-		[String]$Path
+		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
+		[String]$Path,
+		
+		[String]$TempFileSuffix = "_GetFunctions"
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	$CommonParameters = @{
@@ -119,18 +121,202 @@ Function Get-ModuleCommandInfo {
 		} # End switch
 	} # End If ($FileExtension -ne '')
 	
-	$NewPath = $NoExtension + "_GetFunctions.psm1"
+	$NewPath = $NoExtension + $TempFileSuffix + ".psm1"
 	
-	Copy-Item -Path $Path -Destination $NewPath
+	Copy-Item -Path $Path -Destination $NewPath @CommonParameters
+	Start-Sleep -Milliseconds 60
 	
-	Import-Module $NewPath
+	Import-Module $NewPath @CommonParameters
+	Start-Sleep -Milliseconds 60
 	
-	$ModuleInfo = Get-Command -Module $FileNameNoExtension
+	$ModuleInfo = Get-Command -Module ("$FileNameNoExtension" + "$TempFileSuffix") @CommonParameters
+	Start-Sleep -Milliseconds 60
+	
+	Remove-Module -Name ("$FileNameNoExtension" + "$TempFileSuffix")
+	
+	Remove-Item -Path $NewPath
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return $ModuleInfo
 } # End of Get-ModuleCommandInfo function.
 #-----------------------------------------------------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
+Function Get-FunctionsInScript {
+	<#
+	.SYNOPSIS
+	Single-line summary.
+	.DESCRIPTION
+	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	.NOTES
+	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
+	
+	Maybe some original author credits as well.
+	.EXAMPLE
+	Get-FunctionsInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1" -TempFileSuffix "_FindFuncs" -Verbose
+	
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	.EXAMPLE
+	Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo -Verbose
+	
+	$ModuleInfo = Get-ModuleCommandInfo -Path $Path -Verbose
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	#>
+	[Alias("New-ProjectInitTEST")]
+	#Requires -Version 3
+	[CmdletBinding(DefaultParameterSetName = 'Path')]
+	Param(
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "Path")]
+		[ValidateNotNullOrEmpty()]
+		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
+		[String]$Path,
+		
+		[Parameter(Mandatory = $False, Position = 1, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           ParameterSetName = "Path")]
+		[String]$TempFileSuffix = "_GetFunctions",
+		
+		[Parameter(Mandatory = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           ParameterSetName = "ModuleCommandInfo")]
+		[ValidateNotNullOrEmpty()]
+		[Alias('ModuleCmdletInfoObj')]
+		$ModuleCommandInfoObj
+	)
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	Write-Verbose "Building variables hash table:"
+	$Method = 0
+	switch ($Method) {
+		0 {
+			$FuncParams = @{
+				TempFileSuffix = $TempFileSuffix
+			}
+		}
+		1 {
+			$FuncParams = @{}
+			
+			If ($TempFileSuffix) {
+				$FuncParams += @{Test2 = $TempFileSuffix}
+			}
+		}
+		Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}
+	} # End switch
+	
+	Write-Verbose "Getting module info:"
+	If ($Path) {
+		$ModuleCommands = Get-ModuleCommandInfo -Path $Path @FuncParams @CommonParameters
+	} ElseIf ($ModuleCommandInfoObj) {
+		$ModuleCommands = $ModuleCommandInfoObj
+	} Else {
+		Throw "Horrible error in parameter choice: Could not make distinction between Path or ModuleCommandInfoObj param set."
+	}
+	
+	Write-Verbose "Getting function names from module info:"
+	$Functions = $ModuleCommands | Where-Object -Property 'CommandType' -eq "Function"
+	$FunctionNames = $Functions.Name
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	Return $FunctionNames
+} # End of Get-FunctionsInScript function.
+Set-Alias -Name 'New-ProjectInitTEST' -Value 'Get-FunctionsInScript'
+#-----------------------------------------------------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
+Function Get-AliasesInScript {
+	<#
+	.SYNOPSIS
+	Single-line summary.
+	.DESCRIPTION
+	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	.NOTES
+	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
+	
+	Maybe some original author credits as well.
+	.EXAMPLE
+	Get-AliasesInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1" -TempFileSuffix "_FindFuncs" -Verbose
+	
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	.EXAMPLE
+	Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo -Verbose
+	
+	$ModuleInfo = Get-ModuleCommandInfo -Path $Path -Verbose
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	#>
+	[Alias("New-ProjectInitTEST")]
+	#Requires -Version 3
+	[CmdletBinding(DefaultParameterSetName = 'Path')]
+	Param(
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "Path")]
+		[ValidateNotNullOrEmpty()]
+		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
+		[String]$Path,
+		
+		[Parameter(Mandatory = $False, Position = 1, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           ParameterSetName = "Path")]
+		[String]$TempFileSuffix = "_GetFunctions",
+		
+		[Parameter(Mandatory = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           ParameterSetName = "ModuleCommandInfo")]
+		[ValidateNotNullOrEmpty()]
+		[Alias('ModuleCmdletInfoObj')]
+		$ModuleCommandInfoObj
+	)
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	Write-Verbose "Building variables hash table:"
+	$Method = 0
+	switch ($Method) {
+		0 {
+			$FuncParams = @{
+				TempFileSuffix = $TempFileSuffix
+			}
+		}
+		1 {
+			$FuncParams = @{}
+			
+			If ($TempFileSuffix) {
+				$FuncParams += @{Test2 = $TempFileSuffix}
+			}
+		}
+		Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}
+	} # End switch
+	
+	Write-Verbose "Getting module info:"
+	If ($Path) {
+		$ModuleCommands = Get-ModuleCommandInfo -Path $Path @FuncParams @CommonParameters
+	} ElseIf ($ModuleCommandInfoObj) {
+		$ModuleCommands = $ModuleCommandInfoObj
+	} Else {
+		Throw "Horrible error in parameter choice: Could not make distinction between Path or ModuleCommandInfoObj param set."
+	}
+	
+	Write-Verbose "Getting function names from module info:"
+	$Functions = $ModuleCommands | Where-Object -Property 'CommandType' -eq "Alias"
+	$FunctionAliases = $Functions.Name
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	Return $FunctionAliases
+} # End of Get-AliasesInScript function.
+Set-Alias -Name 'New-ProjectInitTEST' -Value 'Get-AliasesInScript'
+#-----------------------------------------------------------------------------------------------------------------------
+
 
 
 
@@ -152,12 +338,14 @@ Function New-TaskTrackingInitiativeTEST {
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
-	[CmdletBinding()]
+	#[CmdletBinding()]
+	[CmdletBinding(DefaultParameterSetName = 'None')]
 	Param(
-		[Parameter(Mandatory = $True, Position = 0,
+		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
-		           ValueFromPipelineByPropertyName = $True,
-		           HelpMessage = "Path to ...")]
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "Path")]
 		[ValidateNotNullOrEmpty()]
 		[Alias('ProjectPath','p')]
 		[String]$Path
