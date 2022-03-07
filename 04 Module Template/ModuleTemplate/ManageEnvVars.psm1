@@ -1299,6 +1299,7 @@ Function New-TaskTrackingInitiativeTEST {
 		           ValueFromPipelineByPropertyName = $True,
 		           HelpMessage = "Path to ...")]
 		[ValidateNotNullOrEmpty()]
+		[Alias('ProjectPath','p')]
 		[String]$Path
 		
 	)
