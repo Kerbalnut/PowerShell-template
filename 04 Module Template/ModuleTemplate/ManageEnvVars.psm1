@@ -1,3 +1,6 @@
+<#
+New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut"
+#>
 
 #-----------------------------------------------------------------------------------------------------------------------
 Function Get-EnvironmentVariable {
@@ -1091,28 +1094,43 @@ Function Remove-EnvironmentVariable {
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	If ($RemoveFromModulePaths) {
 		$EnvVar = Get-EnvironmentVariable -GetModulePaths @GetEnvVarParams
-		Write-Verbose "$($PathVar.Count) path(s) in $EnvVarName env var."
-		$CountPathsToRemove = $RemoveFromPathVar.Count
+		Write-Verbose "$($EnvVar.Count) path(s) in $EnvVarName env var."
+		$CountPathsToRemove = $RemoveFromModulePaths.Count
 		Write-Verbose "$($RemoveFromModulePaths.Count) path(s) to remove from $EnvVarName env var."
 		$NumPathsToRemove = 0
 		$NewEnvVar = @()
-		ForEach ($PathToRemove in $RemoveFromModulePaths) {
-			# Check if there are duplicate paths to remove:
-			$i = 0
-			ForEach ($Path in $EnvVar) {
+		$RemovedPaths = @()
+		$i = 0
+		$j = 0
+		$k = 0
+		ForEach ($Path in $EnvVar) {
+			$i++
+			$PathRemoved = $False
+			ForEach ($PathToRemove in $RemoveFromModulePaths) {
 				If ($Path -eq $PathToRemove) {
-					$i++
-					If ($i -gt 1) {
-						Write-Warning "$i duplicate paths removed from $EnvVarName env var:`n`"$Path`""
+					$j++
+					$PathRemoved = $True
+					ForEach ($RemovedPath in $RemovedPaths) {
+						If ($RemovedPath -eq $Path) {
+							Write-Warning "$k duplicate paths removed from $EnvVarName env var: `"$Path`""
+						}
 					}
-				} Else {
-					$NewEnvVar += $Path
+					Write-Verbose "Removing `$Path from list: `"$Path`""
+					$NumPathsToRemove++
 				}
-			} # End ForEach ($Path in $EnvVar)
-		} # End ForEach ($PathToRemove in $RemoveFromModulePaths)
+			} # End ForEach ($PathToRemove in $RemoveFromModulePaths)
+			If (!($PathRemoved)) {
+				$NewEnvVar += $Path
+			} Else {
+				Write-Verbose "$($i): path not to be removed: `"$Path`""
+			}
+			If ($j -eq $CountPathsToRemove -And !($PathRemoved)) {
+				Write-Warning "Path #$($i): $j/$($CountPathsToRemove): Path not found in $EnvVarName var: `"$PathToRemove`""
+			}
+		} # End ForEach ($Path in $EnvVar)
 		
 		$EnvVar = $NewEnvVar
-		Write-Verbose "$($PathVar.Count) path(s) in new $EnvVarName env var."
+		Write-Verbose "$($EnvVar.Count) path(s) in new $EnvVarName env var."
 		
 		If ($NumPathsToRemove -gt 0) {
 			Write-Verbose "Removing $NumPathsToRemove path(s) from $EnvVarName var:"
@@ -1229,7 +1247,7 @@ Function Remove-PowershellModulePath {
 	Param(
 		[Parameter(Position = 0)]
 		[Alias('RemoveFromModulePath','RemoveFromPSModulePath','RemovePSModulePath','PSModulePaths','PSModulePath','RemoveModulePath','ModulePaths','Module','PowerShell','PoSh')]
-		[String]$RemoveFromModulePaths,
+		[String[]]$RemoveFromModulePaths,
 		[string]$BackupFile = ".\PATH_BACKUP.txt",
 		[Alias('q','Silent','s')]
 		[switch]$Quiet,
