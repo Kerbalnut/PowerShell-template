@@ -69,28 +69,7 @@ PING -n 3 127.0.0.1 > nul
 :: End Run-As-Administrator function
 
 :Header
-::GOTO SkipHeader & REM Un-comment this line to skip Header
 CLS
-ECHO:
-
-:: To run from PowerShell command line:
-:: https://ss64.com/ps/syntax-run.html
-:: https://ss64.com/ps/call.html
-:: & "C:\Users\G\Documents\SpiderOak Hive\Programming\Powershell\Sort-FilesByDate.ps1"
-:: & "C:\Users\G\Documents\SpiderOak Hive\Programming\Powershell\Sort-FilesByDate.ps1" -Verbose -Debug
-:: & "C:\Users\G\Documents\SpiderOak Hive\Programming\Powershell\Templates\powershell-template.ps1" -Verbose -Debug -LaunchedInCmd
-:: https://ss64.com/ps/source.html
-:: . "C:\Users\G\Documents\SpiderOak Hive\Programming\Powershell\Templates\powershell-template.ps1"
-:: . "C:\Users\G\Documents\SpiderOak Hive\Programming\Powershell\Templates\powershell-template.ps1" -Verbose -Debug
-:: . "C:\Users\G\Documents\SpiderOak Hive\Programming\Powershell\Templates\powershell-template.ps1" -Verbose -Debug -LaunchedInCmd
-
-:: Execution Policy:
-:: $oldExecutionPolicy = Get-ExecutionPolicy
-:: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
-:: Set-ExecutionPolicy -ExecutionPolicy Bypass
-:: Set-ExecutionPolicy $oldExecutionPolicy
-
-:: End Header
 
 REM -------------------------------------------------------------------------------
 
@@ -123,6 +102,8 @@ SET "_RUN_OPTIONS=Verbose" & REM Run the script with the "-Verbose" switch.
 SET "_RUN_OPTIONS=Debug" & REM Run the script with the "-Debug" switch.
 SET "_RUN_OPTIONS=VerboseDebug" & REM Run this script with "-Verbose -Debug" switches.
 SET "_RUN_OPTIONS=" & REM Leaving this blank will always prompt user.
+
+SET "_RUN_OPTIONS=Verbose" & REM Run the script with the "-Verbose" switch.
 
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -321,7 +302,7 @@ IF /I "%_RUN_OPTIONS%"=="VerboseDebug" GOTO DebugAndVerbose
 :: https://ss64.com/nt/choice.html
 ECHO CHOICE Loading...
 ::CHOICE /C LDWE /N /M "|  L - Log Times  |  D - Stats by Day  |  W - by Week  |  -----  |  E - Exit  |"
-CHOICE /C RVDG /N /M "|  R - Run Script  |  V - Verbose  |  D - Debug  |  G - Debug & Verbose  |    |"
+CHOICE /C RVDG /N /M "|  R - Run Script  |  V - Verbose  |  D - Debug  |  G - Debug & Verbose  | "
 IF ERRORLEVEL 4 GOTO DebugAndVerbose
 IF ERRORLEVEL 3 GOTO DebugScript
 IF ERRORLEVEL 2 GOTO VerboseRun
