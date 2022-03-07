@@ -11,9 +11,9 @@ Function Get-ModuleCommandInfo {
 	
 	Maybe some original author credits as well.
 	.EXAMPLE
-	Get-ModuleCommandInfo -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1" -Verbose
+	Get-ModuleCommandInfo -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
 	
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	#>
 	[CmdletBinding()]
 	Param(
@@ -153,14 +153,16 @@ Function Get-FunctionsInScript {
 	
 	Maybe some original author credits as well.
 	.EXAMPLE
-	Get-FunctionsInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1" -TempFileSuffix "_FindFuncs" -Verbose
+	Get-FunctionsInScript -Path $Path
+	Get-FunctionsInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
 	
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	.EXAMPLE
 	Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo -Verbose
 	
 	$ModuleInfo = Get-ModuleCommandInfo -Path $Path -Verbose
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1"
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
@@ -241,14 +243,14 @@ Function Get-AliasesInScript {
 	
 	Maybe some original author credits as well.
 	.EXAMPLE
-	Get-AliasesInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1" -TempFileSuffix "_FindFuncs" -Verbose
+	Get-AliasesInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
 	
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	.EXAMPLE
 	Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo -Verbose
 	
 	$ModuleInfo = Get-ModuleCommandInfo -Path $Path -Verbose
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psm1"
+	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3

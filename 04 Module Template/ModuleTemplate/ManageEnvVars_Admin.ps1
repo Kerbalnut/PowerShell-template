@@ -1,6 +1,12 @@
 <#
+.SYNOPSIS
+.DESCRIPTION
+.NOTES
 New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut"
 #>
+#Requires -Version 3
+#Requires -Module ManageEnvVars
+#Requires -RunAsAdministrator
 
 #-----------------------------------------------------------------------------------------------------------------------
 Function Set-EnvironmentVariable {
@@ -25,8 +31,7 @@ Function Set-EnvironmentVariable {
 	Maybe some original author credits as well.
 	#>
 	[Alias("Set-EnvVar")]
-	#Requires -Version 3
-	#Requires -RunAsAdministrator
+	#Requires -Module ManageEnvVars -RunAsAdministrator
 	[CmdletBinding(DefaultParameterSetName = "PathVar")]
 	Param(
 		[Parameter(ParameterSetName = "PathVar")]
@@ -346,7 +351,6 @@ Function Add-EnvironmentVariable {
 	Add-EnvironmentVariable "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
 	#>
 	[Alias("Add-EnvVar")]
-	#Requires -Version 3
 	[CmdletBinding(DefaultParameterSetName = "PathVar")]
 	Param(
 		[Parameter(ParameterSetName = "PathVar", Position = 0)]
@@ -742,7 +746,6 @@ Function Remove-EnvironmentVariable {
 	Remove-EnvironmentVariable "C:\Demo\path", "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt" -Verbose -Force
 	#>
 	[Alias("Remove-EnvVar")]
-	#Requires -Version 3
 	[CmdletBinding(DefaultParameterSetName = "PathVar")]
 	Param(
 		[Parameter(ParameterSetName = "PathVar", Position = 0)]
