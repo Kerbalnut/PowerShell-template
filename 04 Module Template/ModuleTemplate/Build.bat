@@ -21,7 +21,7 @@ FSUTIL dirty query %SystemDrive% >nul
 IF %ERRORLEVEL% EQU 0 GOTO START
 
 ::GOTO START & REM <-- Leave this line in to always skip Elevation Prompt -->
-::GOTO NOCHOICE & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
+GOTO NOCHOICE & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
 :: <-- Remove this block to always RunAs Administrator -->
 ECHO:
 ECHO CHOICE Loading...
