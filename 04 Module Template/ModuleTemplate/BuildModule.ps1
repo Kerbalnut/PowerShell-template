@@ -1,15 +1,21 @@
+<#
+.SYNOPSIS
+A module with functions for building modules.
+#>
 
 #-----------------------------------------------------------------------------------------------------------------------
 Function Get-ModuleCommandInfo {
 	<#
 	.SYNOPSIS
-	Single-line summary.
+	Returns all commands and aliases in a PowerShell script.
 	.DESCRIPTION
-	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	Returns Get-Command results, but for any PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code.
 	.NOTES
-	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
-	
-	Maybe some original author credits as well.
+	.PARAMETER TempFileSuffix
+	This function creates a temporary .psm1 module file to load from, with a custom suffix to avoid conflicts with the original file.
+	Use this parameter to adjust the suffix string.
+	By default, this value is usually set as either "_GetFunctions" or "_GetAliases".
+	For example, the file "HelloWorld.ps1" would use the temporary filename "HelloWorld_GetFunctions.psm1" for operation.
 	.EXAMPLE
 	Get-ModuleCommandInfo -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
 	
@@ -145,13 +151,12 @@ Function Get-ModuleCommandInfo {
 Function Get-FunctionsInScript {
 	<#
 	.SYNOPSIS
-	Single-line summary.
+	Returns a list of Function names in a PowerShell script.
 	.DESCRIPTION
-	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	This is an alias function for Get-ModuleCommandInfo, with output filtered to show function names. Use -ModuleCommandInfoObj parameter for filtering Get-ModuleCommandInfo output directly.
 	.NOTES
-	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
-	
-	Maybe some original author credits as well.
+	.PARAMETER TempFileSuffix
+	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempFileSuffix parameter help text for info.
 	.EXAMPLE
 	Get-FunctionsInScript -Path $Path
 	Get-FunctionsInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
@@ -235,13 +240,12 @@ Set-Alias -Name 'New-ProjectInitTEST' -Value 'Get-FunctionsInScript'
 Function Get-AliasesInScript {
 	<#
 	.SYNOPSIS
-	Single-line summary.
+	Returns a list of Alias names in a PowerShell script.
 	.DESCRIPTION
-	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	This is an alias function for Get-ModuleCommandInfo, with output filtered to show alias names. Use -ModuleCommandInfoObj parameter for filtering Get-ModuleCommandInfo output directly.
 	.NOTES
-	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
-	
-	Maybe some original author credits as well.
+	.PARAMETER TempFileSuffix
+	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempFileSuffix parameter help text for info.
 	.EXAMPLE
 	Get-AliasesInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
 	
@@ -259,7 +263,6 @@ Function Get-AliasesInScript {
 		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
-		           HelpMessage = "Path to ...", 
 		           ParameterSetName = "Path")]
 		[ValidateNotNullOrEmpty()]
 		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
@@ -268,7 +271,7 @@ Function Get-AliasesInScript {
 		[Parameter(Mandatory = $False, Position = 1, 
 		           ValueFromPipelineByPropertyName = $True, 
 		           ParameterSetName = "Path")]
-		[String]$TempFileSuffix = "_GetFunctions",
+		[String]$TempFileSuffix = "_GetAliases",
 		
 		[Parameter(Mandatory = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
