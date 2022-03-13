@@ -2,7 +2,6 @@
 .SYNOPSIS
 .DESCRIPTION
 .NOTES
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut"
 #>
 #Requires -Version 3
 #Requires -Module ManageEnvVars
