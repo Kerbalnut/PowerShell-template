@@ -3,11 +3,10 @@
 
 ::Index: 
 :: 1. :RunAsAdministrator
-:: 2. :Header
-:: 3. :Parameters
-:: 5. :Main
-:: 6. :Footer
-:: 7. :DefineFunctions
+:: 2. :Parameters
+:: 3. :Main
+:: 4. :Footer
+:: 5. :DefineFunctions
 
 REM Bugfix: Use "REM ECHO DEBUG*ING: " instead of "::ECHO DEBUG*ING: " to comment-out debugging lines, in case any are within IF statements.
 REM ECHO DEBUGGING: Begin RunAsAdministrator block.
@@ -22,7 +21,7 @@ IF %ERRORLEVEL% EQU 0 GOTO START
 
 ::GOTO START & REM <-- Leave this line in to always skip Elevation Prompt -->
 GOTO NOCHOICE & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
-:: <-- Remove this block to always RunAs Administrator -->
+:: Comment out both GOTO statements to prompt user to elevate.
 ECHO:
 ECHO CHOICE Loading...
 ECHO:
@@ -30,7 +29,6 @@ ECHO:
 CHOICE /M "Run as Administrator? (CMD.EXE/VBScript elevation)"
 IF ERRORLEVEL 2 GOTO START & REM No.
 IF ERRORLEVEL 1 REM Yes.
-:: <-- Remove this block to always RunAs Administrator -->
 :NOCHOICE
 
 :: wait 2 seconds, in case this user is not in Administrators group. (To prevent an infinite loop of UAC admin requests on a restricted user account.)
@@ -68,9 +66,6 @@ PING -n 3 127.0.0.1 > nul
 :-------------------------------------------------------------------------------
 :: End Run-As-Administrator function
 
-:Header
-CLS
-
 REM -------------------------------------------------------------------------------
 
 :Parameters
@@ -79,7 +74,7 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 :: Param1 = Full path to PowerShell file to run
 
-::SET "_PowerShellFile=%~dpn0.ps1" & REM %~dpn0.ps1 This script's Drive letter, Path, and Name, but with a .ps1 extension.
+::SET "_PowerShellFile=%~dpn0.ps1" & REM %~dpn0.ps1 This script's (%0) [D]rive letter, [P]ath, and [N]ame, but with a .ps1 extension. E.g. HelloWorld.bat will launch HelloWorld.ps1
 SET "_PowerShellFile=%~dp0ManageEnvVars.build.ps1" & REM This script's Drive letter and Path, but pointing to the ManageEnvVars.build.ps1
 
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -89,7 +84,7 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 :: Set as either "RunNonElevated" or "RunAsAdministrator"
 :: Set as Blank String to always prompt user
 SET "_ADMIN_OPTION=RunNonElevated"
-::SET "_ADMIN_OPTION=RunAsAdministrator"
+SET "_ADMIN_OPTION=RunAsAdministrator"
 ::SET "_ADMIN_OPTION="
 
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -255,10 +250,12 @@ ECHO %_PowerShellFile%
 ECHO Get-Help .\%_PowerShellFile_NAME%
 ECHO:
 :: https://ss64.com/nt/syntax-args.html
-::PowerShell.exe -NoProfile -Command Get-Help %_PowerShellFile% -Full
-PowerShell.exe -NoProfile -Command Get-Help .\%_PowerShellFile_NAME% -Full
+PowerShell.exe -NoProfile -Command Get-Help '%_PowerShellFile%'
+::PowerShell.exe -NoProfile -Command Get-Help '%_PowerShellFile%' -Full
+::PowerShell.exe -NoProfile -Command Get-Help .\%_PowerShellFile_NAME% -Full
 ECHO:
 ECHO -------------------------------------------------------------------------------
+PAUSE
 
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -335,7 +332,10 @@ IF %_WindowsVersion% EQU 10 (
 	IF /I "%_ADMIN_OPTION%"=="RunAsAdministrator" (
 		REM PowerShell.exe -NoProfile -Command "& {Start-Process PowerShell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File ""%_PowerShellFile%""' -Verb RunAs}"
 		REM PowerShell.exe -NoProfile -Command "& {Start-Process PowerShell.exe -ArgumentList '-NoProfile -ExecutionPolicy %_ExecutionPolicy% -File ""%_PowerShellFile%""' -Verb RunAs}"
-		PowerShell.exe -NoProfile -Command "& {Start-Process PowerShell.exe -Verb RunAs -ArgumentList '-NoProfile -ExecutionPolicy %_ExecutionPolicy% -File "%_PowerShellFile%" %_POSH_PARAMS%'}"
+		REM PowerShell.exe -NoProfile -Command "& {Start-Process PowerShell.exe -Verb RunAs -ArgumentList '-NoProfile -ExecutionPolicy %_ExecutionPolicy% -File "%_PowerShellFile%" %_POSH_PARAMS%'}"
+		PowerShell.exe -NoProfile -ExecutionPolicy %_ExecutionPolicy% -Command "& {Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy %_ExecutionPolicy% -File """"%_PowerShellFile%"""" -Param1Name """"Param 1 Value"""" -Param2Name """"Param 2 value"""" ' -Verb RunAs}";
+		%_POSH_PARAMS%
+
 	)
 ) ELSE (
 	REM Windows versions earlier than 10 are standard width.
@@ -443,7 +443,6 @@ GOTO Footer
 ::PowerShell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command "& {Start-Process PowerShell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File ""%_PowerShellFile%"" -Verbose' -Verb RunAs}"
 PowerShell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command "& {Start-Process PowerShell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File """"%_PowerShellFile%"""" -Verbose' -Verb RunAs}"
 GOTO Footer
-
 
 ::http://blog.danskingdom.com/allow-others-to-run-your-powershell-scripts-from-a-batch-file-they-will-love-you-for-it/
 

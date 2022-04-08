@@ -2,13 +2,6 @@
 .SYNOPSIS
 Controller script for building ManageEnvVars (and ManageEnvVars_Admin) modules.
 .DESCRIPTION
-.NOTES
-Cmdlets vs. Functions:
-- It is currently much easier for ISVs and developers to package and deploy cmdlets than it is to package libraries of functions or scripts.
-- It is currently easier to write and package help for cmdlets.
-- Cmdlets are written in a compiled .NET language, while functions (and scripts) are written in the PowerShell language. On the plus side, this makes certain developer tasks (such as P/Invoke calls, working with generics) much easier in a cmdlet. On the minus side, this makes you pay the ‘compilation’ tax — making it slower to implement and evaluate new functionality.
-- In V1,  Cmdlets provide the author a great deal of support for parameter validation, and tentative processing (-WhatIf, -Confirm.) This is an implementation artifact, though, and could go away in the future.
-- [Various technical points] Functions support scoping, different naming guidelines, management through the function drive, etc. See your favourite scripting reference for these details.
 .PARAMETER FileNames
 List of module files to export for the module. These can be .ps1 files and they will still be exported as .psm1 files.
 .PARAMETER BuildFuncsName
@@ -21,6 +14,15 @@ To create a new GUID in PowerShell, type `[guid]::NewGuid()`.
 Describes the contents of the module.
 .LINK
 https://www.leeholmes.com/cmdlets-vs-functions/
+.NOTES
+Cmdlets vs. Functions:
+- It is currently much easier for ISVs and developers to package and deploy cmdlets than it is to package libraries of functions or scripts.
+- It is currently easier to write and package help for cmdlets.
+- Cmdlets are written in a compiled .NET language, while functions (and scripts) are written in the PowerShell language. On the plus side, this makes certain developer tasks (such as P/Invoke calls, working with generics) much easier in a cmdlet. On the minus side, this makes you pay the ‘compilation’ tax — making it slower to implement and evaluate new functionality.
+- In V1,  Cmdlets provide the author a great deal of support for parameter validation, and tentative processing (-WhatIf, -Confirm.) This is an implementation artifact, though, and could go away in the future.
+- [Various technical points] Functions support scoping, different naming guidelines, management through the function drive, etc. See your favourite scripting reference for these details.
+
+#Requires -RunAsAdministrator because Get-ModuleCommandInfo function needs to load all files as modules to work, and this project contains modules that are Admin only.
 #>
 #Requires -RunAsAdministrator
 [CmdletBinding()]
@@ -30,7 +32,7 @@ Param(
 	ValueFromPipelineByPropertyName = $True)]
 	[ValidateNotNullOrEmpty()]
 	[Alias('ModuleNames','FilesToExport')]
-	[String[]]$FileNames = @("ManageEnvVars_Admin.ps1","ManageEnvVars_Admin.ps1"),
+	[String[]]$FileNames = @("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1"),
 	
 	[Parameter(Mandatory = $True)]
 	[String]$BuildFuncsName = "BuildModule.ps1",
@@ -39,8 +41,6 @@ Param(
 	[String]$ExceptionFileName = "Exceptions.xml",
 	
 	[String]$ModuleVersion = "0.1",
-	
-	[String]$Author = "Kerbalnut",
 	
 	[Parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, 
 	HelpMessage = "To create a new GUID in PowerShell, type `[guid]::NewGuid()`.")]
@@ -51,6 +51,8 @@ Param(
 	$Description = "",
 	
 	$ReleaseNotes,
+	
+	[String]$Author = "Kerbalnut",
 	
 	[String]$ProjectUri = "https://github.com/Kerbalnut/PowerShell-template",
 	[String]$LicenseUri = "https://github.com/Kerbalnut/PowerShell-template/blob/master/LICENSE",
@@ -64,10 +66,9 @@ Param(
 	[String[]]$CompatiblePSEditions = 'Desktop',
 	
 	[ValidateSet('None','MSIL','X86','IA64','Amd64','Arm')]
-	[String[]]$ProcessorArchitecture 
+	[String[]]$ProcessorArchitecture = @('None','X86','IA64','Amd64')
 	
 )
-[String[]]$ProcessorArchitecture = @('X86','IA64','Amd64')
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 $CommonParameters = @{
 	Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
@@ -78,6 +79,8 @@ $ScriptName = $MyInvocation.MyCommand.Name
 Write-Host "Starting build script: `"$ScriptName`""
 $HomePath = $PSScriptRoot
 $HomePath = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
+
+Pause
 
 $BuildFunctions = Join-Path -Path $HomePath -ChildPath $BuildFuncsName
 If ((Test-Path -Path $BuildFunctions)) {
@@ -125,7 +128,8 @@ If ((Test-Path -Path $ExceptionFile)) {
 		}
 	} # End switch ($Result)
 	
-} Else {
+} Else { # End If ((Test-Path -Path $ExceptionFile))
+	
 	Write-Verbose "No Exceptions file found."
 	
 } # End If/Else ((Test-Path -Path $ExceptionFile))
@@ -173,11 +177,26 @@ ForEach ($file in $FileNames) {
 	Do {
 		$i = 0
 		$SelectionArray = @()
+		ForEach ($Exception in $FileFunctionExceptions) {
+			$i++
+			$SelectionArray += [PSCustomObject]@{
+				ID = $i
+				Name = $Exception
+				Exception = $Ex
+			}
+		} # End ForEach ($Exception in $FileFunctionExceptions)
 		ForEach ($func in $FunctionsList) {
+			$ExceptionStatus = $False
+			ForEach ($Exception in $FileFunctionExceptions) {
+				If ($Exception -eq $func) {
+					$ExceptionStatus = $True
+				}
+			} # End ForEach ($Exception in $FileFunctionExceptions)
 			$i++
 			$SelectionArray += [PSCustomObject]@{
 				ID = $i
 				Name = $func
+				Exception = $ExceptionStatus
 			}
 		} # End ForEach ($func in $FunctionsList)
 		$i++
@@ -215,6 +234,14 @@ $FuncParams = @{
 	TempFileSuffix = $TempFileSuffix
 }
 
+Write-Host "End of $ScriptName script."
+# If running in the console, wait for input before closing.
+if ($Host.Name -eq "ConsoleHost")
+{
+    Write-Host "Press any key to continue..."
+    $Host.UI.RawUI.FlushInputBuffer()   # Make sure buffered input doesn't "press a key" and skip the ReadKey().
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyUp") > $null
+}
 
 
 Pause
@@ -255,6 +282,8 @@ switch ($Result) {
 
 Pause
 
+<#
+
 -Guid <System.Guid>
 To create a new GUID in PowerShell, type `[guid]::NewGuid()`.
 
@@ -289,6 +318,7 @@ the value of this key arent automatically processed.
 -CompatiblePSEditions {Desktop | Core}
 -ProcessorArchitecture {None | MSIL | X86 | IA64 | Amd64 | Arm}
 
+#>
 
 New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion $ModuleVersion -Author $Author
 
