@@ -126,20 +126,30 @@ Function Start-SleepTimer {
 			$RefreshRate = 5
 			$HeaderBreaks = 1
 			
-			$NewLineBreak = "`n"
-			If ($HeaderBreaks -gt 0) {
-				If ($NewLineHeader) {Remove-Variable -Name 'NewLineHeader'}
-				for ($i = 0; $i -lt $HeaderBreaks; $i++) {
-					$NewLineHeader += $NewLineBreak
+			Function Test-Header($HeaderBreaks){
+				$NewLineBreak = "`n"
+				If ($HeaderBreaks -gt 0) {
+					<#If ((Get-Variable -Name 'NewLineHeader') -Or $NewLineHeader -eq '') {
+						# -Or $null -eq $NewLineHeader
+						Remove-Variable -Name 'NewLineHeader'
+					}#>
+					$NewLineHeader = ""
+					for ($i = 0; $i -lt $HeaderBreaks; $i++) {
+						$NewLineHeader += $NewLineBreak
+					}
+				} Else {
+					$NewLineHeader = ""
 				}
-			} Else {
-				$NewLineHeader = ""
+				Write-Host "Header: $HeaderBreaks Start1 $NewLineHeader End1"
+				Write-Host "Header: $HeaderBreaks Start2"
+				Write-Host "$($NewLineHeader)End2"
+				Write-Host "Header: $HeaderBreaks Start3"
+				Write-Host "$NewLineHeader"
+				Write-Host "End3"
 			}
-			Write-Host "Start1 $NewLineHeader End1"
-			Write-Host "Start2"
-			Write-Host "$NewLineHeader"
-			Write-Host "End2"
-			
+			Test-Header -HeaderBreaks 0
+			Test-Header -HeaderBreaks 1
+			Test-Header -HeaderBreaks 5
 			
 			
 			
