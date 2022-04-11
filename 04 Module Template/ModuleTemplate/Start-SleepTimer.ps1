@@ -127,32 +127,34 @@ Function Start-SleepTimer {
 			
 			$RefreshRate = 5
 			$HeaderBreaks = 5
+			$ProgressBarId = 0
 			
-			Function Get-HeaderSpacer($HeaderBreaks,[switch]$Testing) {
+			Function Get-NewlineSpacer([int]$LineBreaks,[switch]$Testing) {
 				<#
 				.EXAMPLE
-				Get-HeaderSpacer -HeaderBreaks 0 -Testing
-				Get-HeaderSpacer -HeaderBreaks 1 -Testing
-				Get-HeaderSpacer -HeaderBreaks 2 -Testing
-				Get-HeaderSpacer -HeaderBreaks 5 -Testing
+				Get-NewlineSpacer -LineBreaks 0 -Testing
+				Get-NewlineSpacer -LineBreaks 1 -Testing
+				Get-NewlineSpacer -LineBreaks 2 -Testing
+				Get-NewlineSpacer -LineBreaks 5 -Testing
 				.EXAMPLE
-				$HeaderLineBreaks = Get-HeaderSpacer -HeaderBreaks 5
-				#>
-				$HeaderLineBreaks = ""
-				If ($HeaderBreaks -gt 0) {
-					for ($i = 0; $i -lt $HeaderBreaks; $i++) {
-						$HeaderLineBreaks += "`n"
+				$NewlineSpace = Get-NewlineSpacer -LineBreaks 5
+				$HeaderLineBreaks = Get-NewlineSpacer -LineBreaks $HeaderBreaks
+				#>`
+				$NewlineSpace = ""
+				If ($LineBreaks -gt 0) {
+					for ($i = 0; $i -lt $LineBreaks; $i++) {
+						$NewlineSpace += "`n"
 					}
 				}
 				If ($Testing) {
-					Write-Host "Headerbreaks: `'$HeaderBreaks`' - Start"
-					Write-Host "$($HeaderLineBreaks)End"
+					Write-Host "LineBreaks: `'$LineBreaks`' - Start"
+					Write-Host "$($NewlineSpace)End"
 				} Else {
-					Return $HeaderLineBreaks
+					Return $NewlineSpace
 				}
-			} # End Function Get-HeaderSpacer
+			} # End Function Get-NewlineSpacer
 			
-			$HeaderLineBreaks = Get-HeaderSpacer -HeaderBreaks $HeaderBreaks
+			$HeaderLineBreaks = Get-NewlineSpacer -LineBreaks $HeaderBreaks
 			
 			Function Get-ProgressBarTest {
 				<#
@@ -164,6 +166,7 @@ Function Start-SleepTimer {
 					Write-Progress -Activity "Counting to 100" -Status "Current Count: $i" -PercentComplete $i -CurrentOperation "Counting ..."
 				}
 			} # End Function Get-ProgressBarTest
+			Get-ProgressBarTest
 			
 			Function Get-NestedProgressBarTest {
 				<#
@@ -180,10 +183,29 @@ Function Start-SleepTimer {
 					}
 				}
 			} # End Function Get-NestedProgressBarTest
+			Get-NestedProgressBarTest
 			
 			
 			
 			do {
+				Clear-Host #cls
+				
+				
+				Write-Progress -Id $ProgressBarId -Activity "Counting to 100" -Status "Current Count: $i" -PercentComplete $i -CurrentOperation "Counting ..."
+				
+				<#
+				Write-Progress
+				     [-Activity] <String>
+				     [[-Status] <String>]
+				     [[-Id] <Int32>]
+				     [-PercentComplete <Int32>]
+				     [-SecondsRemaining <Int32>]
+				     [-CurrentOperation <String>]
+				     [-ParentId <Int32>]
+				     [-Completed]
+				     [-SourceId <Int32>]
+				     [<CommonParameters>]
+				#>
 				
 			} until ($a -eq 0)
 			
