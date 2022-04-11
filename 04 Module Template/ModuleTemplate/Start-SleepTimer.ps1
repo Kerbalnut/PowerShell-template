@@ -102,6 +102,7 @@ Function Start-SleepTimer {
 		} # End Process
 		End {
 			Write-Verbose -Message "[$FunctionName]: Executing End block"
+			Return $Result
 		} # End End block
 	} # End Function Set-PowerState
 	#-----------------------------------------------------------------------------------------------------------------------
