@@ -124,32 +124,33 @@ Function Start-SleepTimer {
 			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 			
 			$RefreshRate = 5
-			$HeaderBreaks = 1
+			$HeaderBreaks = 5
 			
-			Function Test-Header($HeaderBreaks){
-				$NewLineBreak = "`n"
+			Function Get-HeaderSpacer($HeaderBreaks,[switch]$Testing) {
+				<#
+				.EXAMPLE
+				Get-HeaderSpacer -HeaderBreaks 0 -Testing
+				Get-HeaderSpacer -HeaderBreaks 1 -Testing
+				Get-HeaderSpacer -HeaderBreaks 2 -Testing
+				Get-HeaderSpacer -HeaderBreaks 5 -Testing
+				.EXAMPLE
+				$HeaderLineBreaks = Get-HeaderSpacer -HeaderBreaks 5
+				#>
+				$HeaderLineBreaks = ""
 				If ($HeaderBreaks -gt 0) {
-					<#If ((Get-Variable -Name 'NewLineHeader') -Or $NewLineHeader -eq '') {
-						# -Or $null -eq $NewLineHeader
-						Remove-Variable -Name 'NewLineHeader'
-					}#>
-					$NewLineHeader = ""
 					for ($i = 0; $i -lt $HeaderBreaks; $i++) {
-						$NewLineHeader += $NewLineBreak
+						$HeaderLineBreaks += "`n"
 					}
-				} Else {
-					$NewLineHeader = ""
 				}
-				Write-Host "Header: $HeaderBreaks Start1 $NewLineHeader End1"
-				Write-Host "Header: $HeaderBreaks Start2"
-				Write-Host "$($NewLineHeader)End2"
-				Write-Host "Header: $HeaderBreaks Start3"
-				Write-Host "$NewLineHeader"
-				Write-Host "End3"
-			}
-			Test-Header -HeaderBreaks 0
-			Test-Header -HeaderBreaks 1
-			Test-Header -HeaderBreaks 5
+				If ($Testing) {
+					Write-Host "Headerbreaks: `'$HeaderBreaks`' - Start"
+					Write-Host "$($HeaderLineBreaks)End"
+				} Else {
+					Return $HeaderLineBreaks
+				}
+			} # End Function Get-HeaderSpacer
+			
+			$HeaderLineBreaks = Get-HeaderSpacer -HeaderBreaks $HeaderBreaks
 			
 			
 			
