@@ -13,6 +13,8 @@ Function Start-SleepTimer {
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
 	
 	Maybe some original author credits as well.
+	.LINK
+	https://ephos.github.io/posts/2018-8-20-Timers
 	#>
 	[Alias("Set-SleepTimer")]
 	#Requires -Version 3
@@ -49,7 +51,9 @@ Function Start-SleepTimer {
 	Function Set-PowerState {
 		<#
 		.EXAMPLE
-		Set-PowerState -PowerState Hibernate -DisableWake -Force
+		Set-PowerState -Action Sleep
+		.EXAMPLE
+		Set-PowerState -Action Hibernate -DisableWake -Force
 		.LINK
 		https://stackoverflow.com/questions/20713782/suspend-or-hibernate-from-powershell
 		.LINK
@@ -111,6 +115,65 @@ Function Start-SleepTimer {
 		$TimerDuration = New-TimeSpan @TimeSpanParams @CommonParameters
 		
 	}
+	
+	
+	$Method = 0
+	switch ($Method) {
+		0 {
+			Write-Verbose "PowerShell Start-Sleep wait method:"
+			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+			
+			$RefreshRate = 5
+			$HeaderBreaks = 1
+			
+			$NewLineBreak = "`n"
+			If ($HeaderBreaks -gt 0) {
+				If ($NewLineHeader) {Remove-Variable -Name 'NewLineHeader'}
+				for ($i = 0; $i -lt $HeaderBreaks; $i++) {
+					$NewLineHeader += $NewLineBreak
+				}
+			} Else {
+				$NewLineHeader = ""
+			}
+			Write-Host "Start1 $NewLineHeader End1"
+			Write-Host "Start2"
+			Write-Host "$NewLineHeader"
+			Write-Host "End2"
+			
+			
+			
+			
+			do {
+				
+			} until ($a -eq 0)
+			
+			
+			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		}
+		1 {
+			Write-Verbose "Using [Stopwatch] object method:"
+			#https://ephos.github.io/posts/2018-8-20-Timers
+			
+			#Create a Stopwatch
+			$stopWatch = New-Object -TypeName System.Diagnostics.Stopwatch
+			
+			#You can use the $stopWatch variable to see it
+			$stopWatch
+			
+			#Go ahead and check out the methods and properties it has
+			$stopWatch | Get-Member
+			
+		}
+		2 {
+			Write-Verbose "Scheduled Task method:"
+			
+		}
+		Default {
+			Write-Error "Incorrectly definfed method: '$Method'"
+			Throw "Incorrectly definfed method: '$Method'"
+		}
+	}
+	
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return
