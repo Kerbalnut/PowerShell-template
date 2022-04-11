@@ -97,6 +97,12 @@ Function Start-SleepTimer {
 		[Alias('Mins')]
 		[Int32]$Minutes,
 		
+		[Parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True)]
+		[ValidateSet('Sleep','Suspend','Hibernate')]
+		[Alias('PowerAction')]
+		[String]$Action = 'Sleep',
+		
+		[Switch]$DisableWake,
 		[Switch]$Force
 		
 	)
@@ -107,6 +113,10 @@ Function Start-SleepTimer {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
+	$StartTime = Get-Date
+	
+	#[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Hours 2 -Minutes 30)
+	
 	If ($Hours -Or $Minutes) {
 		
 		$TimeSpanParams = @{}
@@ -115,6 +125,18 @@ Function Start-SleepTimer {
 		
 		$TimerDuration = New-TimeSpan @TimeSpanParams @CommonParameters
 		
+	}
+	
+	If ($TimerDuration) {
+		[DateTime]$EndTime = [DateTime]$StartTime + [TimeSpan]$TimerDuration
+	} ElseIf ($DateTime) {
+		[DateTime]$EndTime = [DateTime]$DateTime
+		[TimeSpan]$TimerDuration = [DateTime]$DateTime - [DateTime]$StartTime
+	}
+	
+	$SetPowerStateParams = @{
+		DisableWake = $DisableWake
+		Force = $Force
 	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -128,6 +150,12 @@ Function Start-SleepTimer {
 			$RefreshRate = 5
 			$HeaderBreaks = 5
 			$ProgressBarId = 0
+			
+			If ($Action -eq 'Sleep' -Or $Action -eq 'Suspend') {
+				$ActionVerb = "Sleeping"
+			} ElseIf ($Action -eq 'Hibernate') {
+				$ActionVerb = "Hibernating"
+			}
 			
 			Function Get-NewlineSpacer([int]$LineBreaks,[switch]$Testing) {
 				<#
@@ -168,12 +196,24 @@ Function Start-SleepTimer {
 			} # End Function Get-ProgressBarTest
 			Get-ProgressBarTest
 			
+			Function Get-TimerProgressBarTest($Seconds) {
+				For ($i=0; $i -le $Seconds; $i++) {
+					Write-Progress -Activity "Counting to $Seconds" -Status "Current Count: $i/$Seconds" -PercentComplete (($i/$Seconds)*100) -CurrentOperation "Counting ..."
+					If ($i -ne $Seconds) {
+						Start-Sleep -Seconds 1
+					}
+				}
+				Write-Progress -Activity "Counting to $Seconds" "Current Count: $Seconds/$Seconds" -PercentComplete 100 -CurrentOperation "Complete!" #-Completed
+				Start-Sleep -Seconds 2
+			} # End Function Get-TimerProgressBarTest
+			Get-TimerProgressBarTest -Seconds 5
+			
 			Function Get-NestedProgressBarTest {
 				<#
 				.LINK
 				https://thinkpowershell.com/how-to-make-a-powershell-progress-bar/
 				#>
-				For ($i=0; $i -le 100; $i++) {
+				For ($i=0; $i -le 10; $i++) {
 					Start-Sleep -Milliseconds 1
 					Write-Progress -Id 1 -Activity "First Write Progress" -Status "Current Count: $i" -PercentComplete $i -CurrentOperation "Counting ..."
 					
@@ -185,13 +225,31 @@ Function Start-SleepTimer {
 			} # End Function Get-NestedProgressBarTest
 			Get-NestedProgressBarTest
 			
-			
-			
+			$SecondsToCount = $TimerDuration.TotalSeconds
+			$TimeLeft = $TimerDuration
+			$EndTimeLabel = Get-Date -Date $EndTime -Format t
+			$EndTimeLabel = Get-Date -Date $EndTime -Format T
+			$SecondsCounter = 0
 			do {
 				Clear-Host #cls
 				
+				$TimeLeft = $TimeLeft - (New-TimeSpan -Seconds 1)
+				#$TimeLeft = $TimeLeft - (New-TimeSpan -Seconds $RefreshRate)
 				
-				Write-Progress -Id $ProgressBarId -Activity "Counting to 100" -Status "Current Count: $i" -PercentComplete $i -CurrentOperation "Counting ..."
+				$SecondsCounter = $SecondsCounter + 1
+				#$SecondsCounter = $SecondsCounter + $RefreshRate
+				#$SecondsToCount = $SecondsToCount - 1
+				#$SecondsToCount = $SecondsToCount - $RefreshRate
+				#$SecondsLeft = ($SecondsToCount - $SecondsCounter)
+				#$TimeLeft = New-TimeSpan -Seconds $SecondsToCount
+				$TimeLeft = New-TimeSpan -Seconds ($SecondsToCount - $SecondsCounter)
+				
+				#https://devblogs.microsoft.com/scripting/use-powershell-and-conditional-formatting-to-format-time-spans/
+				#$CountdownLabel = "{0:c}" -f $TimeLeft
+				$CountdownLabel = "{0:g}" -f $TimeLeft
+				#$CountdownLabel = "{0:G}" -f $TimeLeft
+				
+				Write-Progress -Id $ProgressBarId -Activity "$ActionVerb device at $EndTimeLabel" -Status "$ActionVerb device in $CountdownLabel" -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -CurrentOperation "Counting down $(($SecondsToCount - $SecondsCounter)) seconds ..."
 				
 				<#
 				Write-Progress
@@ -207,8 +265,15 @@ Function Start-SleepTimer {
 				     [<CommonParameters>]
 				#>
 				
-			} until ($a -eq 0)
+				Start-Sleep -Seconds 1
+				#Start-Sleep -Seconds $RefreshRate
+				
+				$i = $i - 1
+				#$i = $i - $RefreshRate
+				
+			} until ($i -ge ($SecondsToCount - 30) )
 			
+			Set-PowerState -Action $Action @SetPowerStateParams @CommonParameters
 			
 			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 		}
