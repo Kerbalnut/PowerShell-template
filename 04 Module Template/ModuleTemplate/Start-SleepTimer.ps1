@@ -33,7 +33,9 @@ Function Start-SleepTimer {
 		
 		[Parameter(Mandatory = $False, Position = 1, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
 		[Alias('Mins')]
-		[Int32]$Minutes
+		[Int32]$Minutes,
+		
+		[Switch]$Force
 		
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -43,6 +45,7 @@ Function Start-SleepTimer {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
+	#-----------------------------------------------------------------------------------------------------------------------
 	Function Set-PowerState {
 		<#
 		.EXAMPLE
@@ -65,31 +68,39 @@ Function Start-SleepTimer {
 			[Switch]$DisableWake,
 			[Switch]$Force
 		) # End Param
-	
 		Begin {
-			Write-Verbose -Message 'Executing Begin block'
+			$FunctionName = $MyInvocation.MyCommand
+			
+			Write-Verbose -Message "[$FunctionName]: Executing Begin block"
 			
 			If (!$DisableWake) { $DisableWake = $false }
 			If (!$Force) { $Force = $false }
 			
 			Write-Verbose -Message ('Force is: {0}' -f $Force)
 			Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake)
+			
+			If ($Action -eq 'Sleep' -Or $Action -eq 'Suspend') {
+				[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend
+			}
+			If ($Action -eq 'Hibernate') {
+				[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Hibernate
+			}
+			
+			Write-Verbose "PowerState: `'$PowerState`'"
 		} # End Begin
-	
 		Process {
-			Write-Verbose -Message 'Executing Process block'
+			Write-Verbose -Message "[$FunctionName]: Executing Process block"
 			Try {
 				$Result = [System.Windows.Forms.Application]::SetSuspendState($PowerState, $Force, $DisableWake)
 			} Catch {
 				Write-Error -Exception $_
 			}
 		} # End Process
-	
 		End {
-			Write-Verbose -Message 'Executing End block'
+			Write-Verbose -Message "[$FunctionName]: Executing End block"
 		} # End End block
 	} # End Function Set-PowerState
-	
+	#-----------------------------------------------------------------------------------------------------------------------
 	
 	If ($Hours -Or $Minutes) {
 		
