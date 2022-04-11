@@ -115,6 +115,8 @@ Function Start-SleepTimer {
 	
 	$StartTime = Get-Date
 	
+	[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Minutes 1)
+	#[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Minutes 5)
 	#[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Hours 2 -Minutes 30)
 	
 	If ($Hours -Or $Minutes) {
@@ -130,8 +132,8 @@ Function Start-SleepTimer {
 	If ($TimerDuration) {
 		[DateTime]$EndTime = [DateTime]$StartTime + [TimeSpan]$TimerDuration
 	} ElseIf ($DateTime) {
-		[DateTime]$EndTime = [DateTime]$DateTime
-		[TimeSpan]$TimerDuration = [DateTime]$DateTime - [DateTime]$StartTime
+		[DateTime]$EndTime = Get-Date -Date $DateTime -Millisecond 0
+		[TimeSpan]$TimerDuration = [DateTime]$EndTime - (Get-Date -Date $StartTime -Millisecond 0)
 	}
 	
 	$SetPowerStateParams = @{
@@ -147,7 +149,9 @@ Function Start-SleepTimer {
 			Write-Verbose "PowerShell Start-Sleep wait method:"
 			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 			
-			$RefreshRate = 5
+			$RefreshRate = 1
+			$RefreshRateFast = 200
+			$RefreshRateSlow = 5
 			$HeaderBreaks = 5
 			$ProgressBarId = 0
 			
@@ -181,7 +185,6 @@ Function Start-SleepTimer {
 					Return $NewlineSpace
 				}
 			} # End Function Get-NewlineSpacer
-			
 			$HeaderLineBreaks = Get-NewlineSpacer -LineBreaks $HeaderBreaks
 			
 			Function Get-ProgressBarTest {
@@ -194,7 +197,7 @@ Function Start-SleepTimer {
 					Write-Progress -Activity "Counting to 100" -Status "Current Count: $i" -PercentComplete $i -CurrentOperation "Counting ..."
 				}
 			} # End Function Get-ProgressBarTest
-			Get-ProgressBarTest
+			#Get-ProgressBarTest
 			
 			Function Get-TimerProgressBarTest($Seconds) {
 				For ($i=0; $i -le $Seconds; $i++) {
@@ -206,7 +209,7 @@ Function Start-SleepTimer {
 				Write-Progress -Activity "Counting to $Seconds" "Current Count: $Seconds/$Seconds" -PercentComplete 100 -CurrentOperation "Complete!" #-Completed
 				Start-Sleep -Seconds 2
 			} # End Function Get-TimerProgressBarTest
-			Get-TimerProgressBarTest -Seconds 5
+			#Get-TimerProgressBarTest -Seconds 5
 			
 			Function Get-NestedProgressBarTest {
 				<#
@@ -223,21 +226,21 @@ Function Start-SleepTimer {
 					}
 				}
 			} # End Function Get-NestedProgressBarTest
-			Get-NestedProgressBarTest
+			#Get-NestedProgressBarTest
 			
 			$SecondsToCount = $TimerDuration.TotalSeconds
 			$TimeLeft = $TimerDuration
-			$EndTimeLabel = Get-Date -Date $EndTime -Format t
-			$EndTimeLabel = Get-Date -Date $EndTime -Format T
+			$EndTimeShort = Get-Date -Date $EndTime -Format t
+			$EndTimeLong = Get-Date -Date $EndTime -Format T
 			$SecondsCounter = 0
 			do {
 				Clear-Host #cls
 				
-				$TimeLeft = $TimeLeft - (New-TimeSpan -Seconds 1)
+				#$TimeLeft = $TimeLeft - (New-TimeSpan -Seconds 1)
 				#$TimeLeft = $TimeLeft - (New-TimeSpan -Seconds $RefreshRate)
 				
-				$SecondsCounter = $SecondsCounter + 1
-				#$SecondsCounter = $SecondsCounter + $RefreshRate
+				#$SecondsCounter = $SecondsCounter + 1
+				$SecondsCounter = $SecondsCounter + $RefreshRate
 				#$SecondsToCount = $SecondsToCount - 1
 				#$SecondsToCount = $SecondsToCount - $RefreshRate
 				#$SecondsLeft = ($SecondsToCount - $SecondsCounter)
@@ -249,7 +252,7 @@ Function Start-SleepTimer {
 				$CountdownLabel = "{0:g}" -f $TimeLeft
 				#$CountdownLabel = "{0:G}" -f $TimeLeft
 				
-				Write-Progress -Id $ProgressBarId -Activity "$ActionVerb device at $EndTimeLabel" -Status "$ActionVerb device in $CountdownLabel" -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -CurrentOperation "Counting down $(($SecondsToCount - $SecondsCounter)) seconds ..."
+				Write-Progress -Id $ProgressBarId -Activity "$ActionVerb device at $EndTimeLong" -Status "$ActionVerb device in $CountdownLabel - ($SecondsCounter / $SecondsToCount)" -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -CurrentOperation "Counting down $TimerDuration to $EndTimeShort before $ActionVerb..."
 				
 				<#
 				Write-Progress
@@ -265,13 +268,15 @@ Function Start-SleepTimer {
 				     [<CommonParameters>]
 				#>
 				
-				Start-Sleep -Seconds 1
-				#Start-Sleep -Seconds $RefreshRate
+				#Start-Sleep -Seconds 1
+				Start-Sleep -Seconds $RefreshRate
 				
-				$i = $i - 1
-				#$i = $i - $RefreshRate
+				#$i = $i - 1
+				$i = $i + $RefreshRate
 				
 			} until ($i -ge ($SecondsToCount - 30) )
+			
+			PAUSE
 			
 			Set-PowerState -Action $Action @SetPowerStateParams @CommonParameters
 			
