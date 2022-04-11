@@ -3,6 +3,14 @@
 A module with functions for building modules.
 #>
 
+Function Get-FunctionName {
+	<#
+	.LINK
+	https://stackoverflow.com/questions/3689543/is-there-a-way-to-retrieve-a-powershell-function-name-from-within-a-function
+	#>
+	'This function is called {0}.' -f $MyInvocation.MyCommand
+} # End Function Get-FunctionName
+
 #-----------------------------------------------------------------------------------------------------------------------
 Function Get-ModuleCommandInfo {
 	<#
