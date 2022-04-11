@@ -3,6 +3,7 @@
 A module with functions for building modules.
 #>
 
+#-----------------------------------------------------------------------------------------------------------------------
 Function Get-FunctionName {
 	<#
 	.LINK
@@ -10,6 +11,7 @@ Function Get-FunctionName {
 	#>
 	'This function is called {0}.' -f $MyInvocation.MyCommand
 } # End Function Get-FunctionName
+#-----------------------------------------------------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------------------------------------------------
 Function Get-ModuleCommandInfo {

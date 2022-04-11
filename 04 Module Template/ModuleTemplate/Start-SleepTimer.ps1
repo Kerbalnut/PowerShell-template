@@ -16,7 +16,6 @@ Function Start-SleepTimer {
 	#>
 	[Alias("Set-SleepTimer")]
 	#Requires -Version 3
-	#[CmdletBinding()]
 	[CmdletBinding(DefaultParameterSetName = 'Timer')]
 	Param(
 		[Parameter(Mandatory = $True, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'DateTime')]
@@ -44,45 +43,52 @@ Function Start-SleepTimer {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	function Set-PowerState {
+	Function Set-PowerState {
 		<#
+		.EXAMPLE
+		Set-PowerState -PowerState Hibernate -DisableWake -Force
 		.LINK
 		https://stackoverflow.com/questions/20713782/suspend-or-hibernate-from-powershell
+		.LINK
+		https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.application.setsuspendstate?redirectedfrom=MSDN&view=windowsdesktop-6.0#System_Windows_Forms_Application_SetSuspendState_System_Windows_Forms_PowerState_System_Boolean_System_Boolean_
 		#>
-		[CmdletBinding()]
-		param (
-			  [System.Windows.Forms.PowerState] $PowerState = [System.Windows.Forms.PowerState]::Suspend
-			, [switch] $DisableWake
-			, [switch] $Force
-		)
+		[CmdletBinding(DefaultParameterSetName = 'StringName')]
+		Param(
+			[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'StringName')]
+			[ValidateSet('Sleep','Suspend','Hibernate')]
+			[Alias('PowerAction')]
+			[String]$Action = 'Sleep',
+			
+			[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'PowerState')]
+			[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend,
+			
+			[Switch]$DisableWake,
+			[Switch]$Force
+		) # End Param
 	
-		begin {
-			Write-Verbose -Message 'Executing Begin block';
+		Begin {
+			Write-Verbose -Message 'Executing Begin block'
+			
+			If (!$DisableWake) { $DisableWake = $false }
+			If (!$Force) { $Force = $false }
+			
+			Write-Verbose -Message ('Force is: {0}' -f $Force)
+			Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake)
+		} # End Begin
 	
-			if (!$DisableWake) { $DisableWake = $false; };
-			if (!$Force) { $Force = $false; };
-	
-			Write-Verbose -Message ('Force is: {0}' -f $Force);
-			Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake);
-		}
-	
-		process {
-			Write-Verbose -Message 'Executing Process block';
-			try {
-				$Result = [System.Windows.Forms.Application]::SetSuspendState($PowerState, $Force, $DisableWake);
+		Process {
+			Write-Verbose -Message 'Executing Process block'
+			Try {
+				$Result = [System.Windows.Forms.Application]::SetSuspendState($PowerState, $Force, $DisableWake)
+			} Catch {
+				Write-Error -Exception $_
 			}
-			catch {
-				Write-Error -Exception $_;
-			}
-		}
+		} # End Process
 	
-		end {
-			Write-Verbose -Message 'Executing End block';
-		}
-	}
-	
-	# Call the function
-	Set-PowerState -PowerState Hibernate -DisableWake -Force;
+		End {
+			Write-Verbose -Message 'Executing End block'
+		} # End End block
+	} # End Function Set-PowerState
 	
 	
 	If ($Hours -Or $Minutes) {
@@ -179,6 +185,7 @@ Function New-TaskTrackingInitiativeTEST {
 		           HelpMessage = "Path to ...", 
 		           ParameterSetName = "Path")]
 		[ValidateNotNullOrEmpty()]
+		[ValidateSet("default", "powershell.exe", "Code.exe", "VSCodium.exe")]
 		[Alias('ProjectPath','p')]
 		[String]$Path
 		
