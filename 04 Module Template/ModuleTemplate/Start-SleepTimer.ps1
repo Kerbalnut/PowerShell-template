@@ -1,5 +1,65 @@
 
 #-----------------------------------------------------------------------------------------------------------------------
+Function Set-PowerState {
+	<#
+	.EXAMPLE
+	Set-PowerState -Action Sleep
+	.EXAMPLE
+	Set-PowerState -Action Hibernate -DisableWake -Force
+	.LINK
+	https://stackoverflow.com/questions/20713782/suspend-or-hibernate-from-powershell
+	.LINK
+	https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.application.setsuspendstate?redirectedfrom=MSDN&view=windowsdesktop-6.0#System_Windows_Forms_Application_SetSuspendState_System_Windows_Forms_PowerState_System_Boolean_System_Boolean_
+	#>
+	[CmdletBinding(DefaultParameterSetName = 'StringName')]
+	Param(
+		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'StringName')]
+		[ValidateSet('Sleep','Suspend','Hibernate')]
+		[Alias('PowerAction')]
+		[String]$Action = 'Sleep',
+		
+		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'PowerState')]
+		[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend,
+		
+		[Switch]$DisableWake,
+		[Switch]$Force
+	) # End Param
+	Begin {
+		$FunctionName = $MyInvocation.MyCommand
+		
+		Write-Verbose -Message "[$FunctionName]: Executing Begin block"
+		
+		If (!$DisableWake) { $DisableWake = $false }
+		If (!$Force) { $Force = $false }
+		
+		Write-Verbose -Message ('Force is: {0}' -f $Force)
+		Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake)
+		
+		If ($Action -eq 'Sleep' -Or $Action -eq 'Suspend') {
+			[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend
+		}
+		If ($Action -eq 'Hibernate') {
+			[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Hibernate
+		}
+		
+		Write-Verbose "PowerState: `'$PowerState`'"
+	} # End Begin
+	Process {
+		Write-Verbose -Message "[$FunctionName]: Executing Process block"
+		Try {
+			$Result = [System.Windows.Forms.Application]::SetSuspendState($PowerState, $Force, $DisableWake)
+		} Catch {
+			Write-Error -Exception $_
+		}
+	} # End Process
+	End {
+		Write-Verbose -Message "[$FunctionName]: Executing End block"
+		Return $Result
+	} # End End block
+} # End Function Set-PowerState
+#-----------------------------------------------------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
 Function Start-SleepTimer {
 	<#
 	.SYNOPSIS
@@ -46,66 +106,6 @@ Function Start-SleepTimer {
 		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	
-	#-----------------------------------------------------------------------------------------------------------------------
-	Function Set-PowerState {
-		<#
-		.EXAMPLE
-		Set-PowerState -Action Sleep
-		.EXAMPLE
-		Set-PowerState -Action Hibernate -DisableWake -Force
-		.LINK
-		https://stackoverflow.com/questions/20713782/suspend-or-hibernate-from-powershell
-		.LINK
-		https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.application.setsuspendstate?redirectedfrom=MSDN&view=windowsdesktop-6.0#System_Windows_Forms_Application_SetSuspendState_System_Windows_Forms_PowerState_System_Boolean_System_Boolean_
-		#>
-		[CmdletBinding(DefaultParameterSetName = 'StringName')]
-		Param(
-			[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'StringName')]
-			[ValidateSet('Sleep','Suspend','Hibernate')]
-			[Alias('PowerAction')]
-			[String]$Action = 'Sleep',
-			
-			[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'PowerState')]
-			[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend,
-			
-			[Switch]$DisableWake,
-			[Switch]$Force
-		) # End Param
-		Begin {
-			$FunctionName = $MyInvocation.MyCommand
-			
-			Write-Verbose -Message "[$FunctionName]: Executing Begin block"
-			
-			If (!$DisableWake) { $DisableWake = $false }
-			If (!$Force) { $Force = $false }
-			
-			Write-Verbose -Message ('Force is: {0}' -f $Force)
-			Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake)
-			
-			If ($Action -eq 'Sleep' -Or $Action -eq 'Suspend') {
-				[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend
-			}
-			If ($Action -eq 'Hibernate') {
-				[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Hibernate
-			}
-			
-			Write-Verbose "PowerState: `'$PowerState`'"
-		} # End Begin
-		Process {
-			Write-Verbose -Message "[$FunctionName]: Executing Process block"
-			Try {
-				$Result = [System.Windows.Forms.Application]::SetSuspendState($PowerState, $Force, $DisableWake)
-			} Catch {
-				Write-Error -Exception $_
-			}
-		} # End Process
-		End {
-			Write-Verbose -Message "[$FunctionName]: Executing End block"
-			Return $Result
-		} # End End block
-	} # End Function Set-PowerState
-	#-----------------------------------------------------------------------------------------------------------------------
 	
 	If ($Hours -Or $Minutes) {
 		
