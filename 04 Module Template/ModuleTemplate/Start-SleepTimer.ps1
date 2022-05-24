@@ -149,7 +149,7 @@ Function Start-SleepTimer {
 			Write-Verbose "PowerShell Start-Sleep wait method:"
 			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 			
-			$RefreshRate = 1
+			$RefreshRate = 1 # in seconds
 			$RefreshRateFast = 200
 			$RefreshRateSlow = 5
 			$HeaderBreaks = 5
@@ -233,18 +233,53 @@ Function Start-SleepTimer {
 			$EndTimeShort = Get-Date -Date $EndTime -Format t
 			$EndTimeLong = Get-Date -Date $EndTime -Format T
 			$SecondsCounter = 0
+			$i = 0
+			
+			$CounterMethod = 0
+			switch ($CounterMetod) {
+				0 {
+					
+					do {
+						Clear-Host #cls
+						
+						$SecondsCounter = $SecondsCounter + $RefreshRate
+						$TimeLeft = New-TimeSpan -Seconds ($SecondsToCount - $SecondsCounter)
+						
+						#https://devblogs.microsoft.com/scripting/use-powershell-and-conditional-formatting-to-format-time-spans/
+						#$CountdownLabel = "{0:c}" -f $TimeLeft
+						$CountdownLabel = "{0:g}" -f $TimeLeft
+						#$CountdownLabel = "{0:G}" -f $TimeLeft
+						
+						Write-Progress -Id $ProgressBarId -Activity "$ActionVerb device at $EndTimeLong" -Status "$ActionVerb device in $CountdownLabel - ($SecondsCounter / $SecondsToCount)" -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -CurrentOperation "Counting down $TimerDuration to $EndTimeShort before $ActionVerb..."
+						
+						<#
+						Write-Progress
+							[-Activity] <String>
+							[[-Status] <String>]
+							[[-Id] <Int32>]
+							[-PercentComplete <Int32>]
+							[-SecondsRemaining <Int32>]
+							[-CurrentOperation <String>]
+							[-ParentId <Int32>]
+							[-Completed]
+							[-SourceId <Int32>]
+							[<CommonParameters>]
+						#>
+						
+						Start-Sleep -Seconds $RefreshRate
+						
+						#$i = $i + $RefreshRate
+						
+						#} until ($i -ge ($SecondsToCount - 30) )
+					} until ($SecondsCounter -ge ($SecondsToCount - 30) )
+					
+				}
+				Default {}
+			}
 			do {
 				Clear-Host #cls
 				
-				#$TimeLeft = $TimeLeft - (New-TimeSpan -Seconds 1)
-				#$TimeLeft = $TimeLeft - (New-TimeSpan -Seconds $RefreshRate)
-				
-				#$SecondsCounter = $SecondsCounter + 1
 				$SecondsCounter = $SecondsCounter + $RefreshRate
-				#$SecondsToCount = $SecondsToCount - 1
-				#$SecondsToCount = $SecondsToCount - $RefreshRate
-				#$SecondsLeft = ($SecondsToCount - $SecondsCounter)
-				#$TimeLeft = New-TimeSpan -Seconds $SecondsToCount
 				$TimeLeft = New-TimeSpan -Seconds ($SecondsToCount - $SecondsCounter)
 				
 				#https://devblogs.microsoft.com/scripting/use-powershell-and-conditional-formatting-to-format-time-spans/
@@ -268,13 +303,12 @@ Function Start-SleepTimer {
 				     [<CommonParameters>]
 				#>
 				
-				#Start-Sleep -Seconds 1
 				Start-Sleep -Seconds $RefreshRate
 				
-				#$i = $i - 1
-				$i = $i + $RefreshRate
+				#$i = $i + $RefreshRate
 				
-			} until ($i -ge ($SecondsToCount - 30) )
+				#} until ($i -ge ($SecondsToCount - 30) )
+			} until ($SecondsCounter -ge ($SecondsToCount - 30) )
 			
 			PAUSE
 			
