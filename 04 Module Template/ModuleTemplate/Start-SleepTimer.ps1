@@ -173,7 +173,7 @@ Function Start-SleepTimer {
 			$RefreshRate = 1 # in seconds
 			$RefreshRateFast = 200
 			$RefreshRateSlow = 5
-			$TicsBeforeCounterRefresh = 10
+			$TicsBeforeCounterRefresh = 9
 			$HeaderBreaks = 5
 			$ProgressBarId = 0
 			
@@ -255,8 +255,12 @@ Function Start-SleepTimer {
 			$SecondsToCount = $TimerDuration.TotalSeconds
 			$OrigSecondsToCount = $TimerDuration.TotalSeconds
 			$TimeLeft = $TimerDuration
+			$OrigTimerDuration = $TimerDuration
+			$TimerDurationWhole = $TimerDuration
 			$EndTimeShort = Get-Date -Date $EndTime -Format t
 			$EndTimeLong = Get-Date -Date $EndTime -Format T
+			$StartTimeShort = Get-Date -Date $StartTime -Format t
+			$StartTimeLong = Get-Date -Date $StartTime -Format T
 			$SecondsCounter = 0
 			$i = 0
 			
@@ -271,67 +275,70 @@ Function Start-SleepTimer {
 					do {
 						#Clear-Host #cls
 						
+						#$i = $i + $RefreshRate
 						$SecondsCounter = $SecondsCounter + $RefreshRate
 						$TimeLeft = New-TimeSpan -Seconds ($SecondsToCount - $SecondsCounter)
+						$TimeElapsed = New-TimeSpan -Seconds ($SecondsCounter)
 						
 						#https://devblogs.microsoft.com/scripting/use-powershell-and-conditional-formatting-to-format-time-spans/
 						#$CountdownLabel = "{0:c}" -f $TimeLeft
 						$CountdownLabel = "{0:g}" -f $TimeLeft
 						#$CountdownLabel = "{0:G}" -f $TimeLeft
 						
+						$CountUpLabel = "{0:g}" -f $TimeElapsed
+						
 						$PercentageComplete = ($SecondsCounter / $SecondsToCount).ToString("P")
 						
 						If ($j -lt $TicsBeforeCounterRefresh) {
 							$j++
-							$Status = "Counting down for $TimerDuration to $EndTimeShort before $ActionVerb..."
+							$Status = "Counting at $StartTimeShort for $OrigTimerDuration every $RefreshRate second(s) from $TimerDurationWhole down to $EndTimeShort before $ActionVerb..."
 							If ($SecondsToCount -ne $OrigSecondsToCount) {
-								$Diff = $SecondsToCount - $OrigSecondsToCount 
+								$Diff = $SecondsToCount - $OrigSecondsToCount
 								If ($Diff -ge 0) {$Diff = "+$Diff"}
 								$SecondsToCountLabel = "$SecondsToCount (orig $OrigSecondsToCount $Diff)"
 							} Else {
 								$SecondsToCountLabel = $SecondsToCount
 							}
 							If ($k -gt 0) {
-								$CurrentOp = "$ActionVerb device in $CountdownLabel - $PercentageComplete - (Counting every $RefreshRate second(s): $SecondsCounter / $SecondsToCountLabel - Re-sync deadline: $j/$TicsBeforeCounterRefresh, done $k time(s), cumulitive drift: $FloatTimeTotal)"
+								$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter / $SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterRefresh, done $k time(s), drift: $FloatSeconds cumulative: $FloatTimeTotal"
 							} Else {
-								$CurrentOp = "$ActionVerb device in $CountdownLabel - $PercentageComplete - (Counting every $RefreshRate second(s): $SecondsCounter/$SecondsToCountLabel - Re-sync deadline: $j/$TicsBeforeCounterRefresh)"
+								$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterRefresh"
 							}
 						} Else {
 							$j = 0
 							$k++
 							$Status = "Re-syncing timer with $EndTimeShort deadline... (done $k times)"
 							
+							#[TimeSpan]$NewTimerDurationWhole = [DateTime]$EndTime - (Get-Date -Millisecond 0)
 							[TimeSpan]$NewTimerDuration = [DateTime]$EndTime - (Get-Date)
-							
 							$NewSecondsToCount = $NewTimerDuration.TotalSeconds
+							[TimeSpan]$NewTimerDurationWhole = New-TimeSpan -Seconds ([math]::Round($NewSecondsToCount,0))
 							$TimeLeft = $NewTimerDuration
 							
 							$FloatSeconds = [math]::Round(( $NewSecondsToCount - ($SecondsToCount - $SecondsCounter) ),1)
 							$SecondsCounterRemaining = $SecondsToCount - $SecondsCounter
 							
 							If ($NewSecondsToCount -lt $SecondsCounterRemaining) {
-								$CurrentOp = "Shortening timer by $([math]::Round(( $SecondsCounterRemaining - $NewSecondsToCount ),1)) second(s). Total time drift $FloatTimeTotal has been adjusted by $FloatSeconds to equal $([math]::Round(( $FloatTimeTotal + $FloatSeconds ),1))"
+								$CurrentOp = "Shortening float counter by $([math]::Round(( $SecondsCounterRemaining - $NewSecondsToCount ),1)) second(s)."
 							} ElseIf ($NewSecondsToCount -gt $SecondsCounterRemaining) {
-								$CurrentOp = "Lengthening timer by $([math]::Round(( $NewSecondsToCount - $SecondsCounterRemaining ),1)) second(s). Total time drift $FloatTimeTotal has been adjusted by $FloatSeconds to equal $([math]::Round(( $FloatTimeTotal + $FloatSeconds ),1))"
+								$CurrentOp = "Lengthening float counter by $([math]::Round(( $NewSecondsToCount - $SecondsCounterRemaining ),1)) second(s)."
 							} ElseIf ($NewSecondsToCount -eq $SecondsCounterRemaining) {
-								$CurrentOp = "No adjustment needed! Total time drift stays at: $FloatTimeTotal"
+								$CurrentOp = "No adjustment needed!"
 							}
 							
 							$FloatTimeTotal = [math]::Round(( $FloatTimeTotal + $FloatSeconds ),1)
 							[TimeSpan]$TimerDuration = [TimeSpan]$NewTimerDuration
+							[TimeSpan]$TimerDurationWhole = [TimeSpan]$NewTimerDurationWhole
 							
-							If ($FloatSeconds -ge 1 -Or $FloatSeconds -le -1) {
-								
-								$FloatTimeWhole = [math]::Round($FloatSeconds,0)
-								
+							$FloatTimeWhole = [math]::Round($FloatSeconds,0)
+							
+							If ($FloatTimeWhole -ge 1 -Or $FloatTimeWhole -le -1) {
 								#$SecondsCounterRemaining
-								
-								$SecondsToCount = $SecondsToCount + $FloatTimeWhole
-								
+								#$SecondsToCount = $SecondsToCount + $FloatTimeWhole
+								$SecondsToCount = ( [math]::Round($NewSecondsToCount,0) + $SecondsCounter )
 							}
 							
-							
-						}
+						} # End If/Else ($j -lt $TicsBeforeCounterRefresh)
 						
 						Write-Progress -Id $ProgressBarId -Activity $ActivityName -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -Status $Status -CurrentOperation $CurrentOp
 						
@@ -350,8 +357,6 @@ Function Start-SleepTimer {
 						#>
 						
 						Start-Sleep -Seconds $RefreshRate
-						
-						#$i = $i + $RefreshRate
 						
 						#} until ($SecondsCounter -ge ($SecondsToCount - 30) )
 					} until ($SecondsCounter -ge $SecondsToCount)
