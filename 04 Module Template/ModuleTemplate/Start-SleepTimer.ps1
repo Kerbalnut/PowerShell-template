@@ -2,6 +2,11 @@
 #-----------------------------------------------------------------------------------------------------------------------
 Function Set-PowerState {
 	<#
+	.PARAMETER DisableWake
+	From the original StackOverflow answer:
+	Note: In my testing, the -DisableWake option did not make any distinguishable difference that I am aware of. I was still capable of using the keyboard and mouse to wake the computer, even when this parameter was set to $True.
+	
+	About disableWakeEvent... This parameter can prevent SetWaitableTimer() to awake the computer. SetWaitableTimer() used by Task Scheduler (at least). See details here: msdn.microsoft.com/en-us/library/windows/desktop/aa373235.aspx – CoolCmd
 	.EXAMPLE
 	Set-PowerState -Action Sleep
 	.EXAMPLE
@@ -18,8 +23,8 @@ Function Set-PowerState {
 		[Alias('PowerAction')]
 		[String]$Action = 'Sleep',
 		
-		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'PowerState')]
-		[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend,
+		#[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'PowerState')]
+		#[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend,
 		
 		[Switch]$DisableWake,
 		[Switch]$Force
@@ -34,6 +39,8 @@ Function Set-PowerState {
 		
 		Write-Verbose -Message ('Force is: {0}' -f $Force)
 		Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake)
+		
+		Add-Type -AssemblyName System.Windows.Forms
 		
 		If ($Action -eq 'Sleep' -Or $Action -eq 'Suspend') {
 			[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Suspend
@@ -73,6 +80,15 @@ Function Start-SleepTimer {
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
 	
 	Maybe some original author credits as well.
+	.EXAMPLE
+	Start-SleepTimer -Hours 2 -Minutes 30 -Action 'sleep'
+	Starts a sleep countdown timer for 2 hours and 30 minutes from now. 
+	.EXAMPLE
+	Start-SleepTimer -TimerDuration (New-TimeSpan -Seconds 10) -Verbose
+	Sets a sleep timer for 10 seconds from now. The default action is to sleep/suspend the system, so no -Action parameter is required.
+	.EXAMPLE
+	Start-SleepTimer -DateTime (Get-Date -Hour (12 + 8) -Minute 0 -Second 0) -Verbose -Action 'Hibernate'
+	Sets a hibernate timer for 8 PM.
 	.LINK
 	https://ephos.github.io/posts/2018-8-20-Timers
 	#>
@@ -88,7 +104,9 @@ Function Start-SleepTimer {
 		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'Timer')]
 		[ValidateNotNullOrEmpty()]
 		[Alias('SleepTimer','Timer')]
-		[TimeSpan]$TimerDuration = (New-TimeSpan -Hours 2 -Minutes 30),
+		#[TimeSpan]$TimerDuration = (New-TimeSpan -Hours 2 -Minutes 30),
+		#[TimeSpan]$TimerDuration = (New-TimeSpan -Minutes 3),
+		[TimeSpan]$TimerDuration = (New-TimeSpan -Seconds 10),
 		
 		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
 		[Int32]$Hours,
@@ -115,11 +133,16 @@ Function Start-SleepTimer {
 	
 	$StartTime = Get-Date
 	
-	[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Minutes 1)
+	#[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Minutes 1)
 	#[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Minutes 5)
 	#[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Hours 2 -Minutes 30)
 	
-	If ($Hours -Or $Minutes) {
+	If ($DateTime) {
+		Write-Verbose "ParameterSet selected: 'DateTime'"
+		[DateTime]$EndTime = Get-Date -Date $DateTime -Millisecond 0
+		[TimeSpan]$TimerDuration = [DateTime]$EndTime - (Get-Date -Date $StartTime -Millisecond 0)
+	} ElseIf ($Hours -Or $Minutes) {
+		Write-Verbose "ParameterSet selected: 'HoursMins'"
 		
 		$TimeSpanParams = @{}
 		If ($Hours) { $TimeSpanParams += @{Hours = $Hours} }
@@ -127,14 +150,12 @@ Function Start-SleepTimer {
 		
 		$TimerDuration = New-TimeSpan @TimeSpanParams @CommonParameters
 		
-	}
-	
-	If ($TimerDuration) {
+	} ElseIf ($TimerDuration) {
+		Write-Verbose "ParameterSet selected: 'Timer'"
 		[DateTime]$EndTime = [DateTime]$StartTime + [TimeSpan]$TimerDuration
-	} ElseIf ($DateTime) {
-		[DateTime]$EndTime = Get-Date -Date $DateTime -Millisecond 0
-		[TimeSpan]$TimerDuration = [DateTime]$EndTime - (Get-Date -Date $StartTime -Millisecond 0)
 	}
+	Write-Verbose "`$EndTime = $EndTime"
+	Write-Verbose "`$TimerDuration = $TimerDuration"
 	
 	$SetPowerStateParams = @{
 		DisableWake = $DisableWake
@@ -152,6 +173,7 @@ Function Start-SleepTimer {
 			$RefreshRate = 1 # in seconds
 			$RefreshRateFast = 200
 			$RefreshRateSlow = 5
+			$TicsBeforeCounterRefresh = 10
 			$HeaderBreaks = 5
 			$ProgressBarId = 0
 			
@@ -201,7 +223,9 @@ Function Start-SleepTimer {
 			
 			Function Get-TimerProgressBarTest($Seconds) {
 				For ($i=0; $i -le $Seconds; $i++) {
-					Write-Progress -Activity "Counting to $Seconds" -Status "Current Count: $i/$Seconds" -PercentComplete (($i/$Seconds)*100) -CurrentOperation "Counting ..."
+					$PercentageComplete = ($i/$Seconds).ToString("P")
+					$PercentageComplete2 = "$( [math]::Round(( ($i/$Seconds)*100 ),2) ) %"
+					Write-Progress -Activity "Counting to $Seconds" -Status "Current Count: $i/$Seconds - $PercentageComplete - $PercentageComplete2" -PercentComplete (($i/$Seconds)*100) -CurrentOperation "Counting ..."
 					If ($i -ne $Seconds) {
 						Start-Sleep -Seconds 1
 					}
@@ -209,7 +233,7 @@ Function Start-SleepTimer {
 				Write-Progress -Activity "Counting to $Seconds" "Current Count: $Seconds/$Seconds" -PercentComplete 100 -CurrentOperation "Complete!" #-Completed
 				Start-Sleep -Seconds 2
 			} # End Function Get-TimerProgressBarTest
-			#Get-TimerProgressBarTest -Seconds 5
+			#Get-TimerProgressBarTest -Seconds 777
 			
 			Function Get-NestedProgressBarTest {
 				<#
@@ -229,6 +253,7 @@ Function Start-SleepTimer {
 			#Get-NestedProgressBarTest
 			
 			$SecondsToCount = $TimerDuration.TotalSeconds
+			$OrigSecondsToCount = $TimerDuration.TotalSeconds
 			$TimeLeft = $TimerDuration
 			$EndTimeShort = Get-Date -Date $EndTime -Format t
 			$EndTimeLong = Get-Date -Date $EndTime -Format T
@@ -236,11 +261,15 @@ Function Start-SleepTimer {
 			$i = 0
 			
 			$CounterMethod = 0
-			switch ($CounterMetod) {
+			switch ($CounterMethod) {
 				0 {
-					
+					Write-Verbose "Write-Progress method:"
+					$ActivityName = "$ActionVerb device at $EndTimeLong - (Ctrl + C to Cancel)"
+					$j = 0 # Clock re-sync counter, used with $TicsBeforeCounterRefresh
+					$k = 0 # Re-sync operation counter
+					$FloatTimeTotal = 0
 					do {
-						Clear-Host #cls
+						#Clear-Host #cls
 						
 						$SecondsCounter = $SecondsCounter + $RefreshRate
 						$TimeLeft = New-TimeSpan -Seconds ($SecondsToCount - $SecondsCounter)
@@ -250,7 +279,61 @@ Function Start-SleepTimer {
 						$CountdownLabel = "{0:g}" -f $TimeLeft
 						#$CountdownLabel = "{0:G}" -f $TimeLeft
 						
-						Write-Progress -Id $ProgressBarId -Activity "$ActionVerb device at $EndTimeLong" -Status "$ActionVerb device in $CountdownLabel - ($SecondsCounter / $SecondsToCount)" -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -CurrentOperation "Counting down $TimerDuration to $EndTimeShort before $ActionVerb..."
+						$PercentageComplete = ($SecondsCounter / $SecondsToCount).ToString("P")
+						
+						If ($j -lt $TicsBeforeCounterRefresh) {
+							$j++
+							$Status = "Counting down for $TimerDuration to $EndTimeShort before $ActionVerb..."
+							If ($SecondsToCount -ne $OrigSecondsToCount) {
+								$Diff = $SecondsToCount - $OrigSecondsToCount 
+								If ($Diff -ge 0) {$Diff = "+$Diff"}
+								$SecondsToCountLabel = "$SecondsToCount (orig $OrigSecondsToCount $Diff)"
+							} Else {
+								$SecondsToCountLabel = $SecondsToCount
+							}
+							If ($k -gt 0) {
+								$CurrentOp = "$ActionVerb device in $CountdownLabel - $PercentageComplete - (Counting every $RefreshRate second(s): $SecondsCounter / $SecondsToCountLabel - Re-sync deadline: $j/$TicsBeforeCounterRefresh, done $k time(s), cumulitive drift: $FloatTimeTotal)"
+							} Else {
+								$CurrentOp = "$ActionVerb device in $CountdownLabel - $PercentageComplete - (Counting every $RefreshRate second(s): $SecondsCounter/$SecondsToCountLabel - Re-sync deadline: $j/$TicsBeforeCounterRefresh)"
+							}
+						} Else {
+							$j = 0
+							$k++
+							$Status = "Re-syncing timer with $EndTimeShort deadline... (done $k times)"
+							
+							[TimeSpan]$NewTimerDuration = [DateTime]$EndTime - (Get-Date)
+							
+							$NewSecondsToCount = $NewTimerDuration.TotalSeconds
+							$TimeLeft = $NewTimerDuration
+							
+							$FloatSeconds = [math]::Round(( $NewSecondsToCount - ($SecondsToCount - $SecondsCounter) ),1)
+							$SecondsCounterRemaining = $SecondsToCount - $SecondsCounter
+							
+							If ($NewSecondsToCount -lt $SecondsCounterRemaining) {
+								$CurrentOp = "Shortening timer by $([math]::Round(( $SecondsCounterRemaining - $NewSecondsToCount ),1)) second(s). Total time drift $FloatTimeTotal has been adjusted by $FloatSeconds to equal $([math]::Round(( $FloatTimeTotal + $FloatSeconds ),1))"
+							} ElseIf ($NewSecondsToCount -gt $SecondsCounterRemaining) {
+								$CurrentOp = "Lengthening timer by $([math]::Round(( $NewSecondsToCount - $SecondsCounterRemaining ),1)) second(s). Total time drift $FloatTimeTotal has been adjusted by $FloatSeconds to equal $([math]::Round(( $FloatTimeTotal + $FloatSeconds ),1))"
+							} ElseIf ($NewSecondsToCount -eq $SecondsCounterRemaining) {
+								$CurrentOp = "No adjustment needed! Total time drift stays at: $FloatTimeTotal"
+							}
+							
+							$FloatTimeTotal = [math]::Round(( $FloatTimeTotal + $FloatSeconds ),1)
+							[TimeSpan]$TimerDuration = [TimeSpan]$NewTimerDuration
+							
+							If ($FloatSeconds -ge 1 -Or $FloatSeconds -le -1) {
+								
+								$FloatTimeWhole = [math]::Round($FloatSeconds,0)
+								
+								#$SecondsCounterRemaining
+								
+								$SecondsToCount = $SecondsToCount + $FloatTimeWhole
+								
+							}
+							
+							
+						}
+						
+						Write-Progress -Id $ProgressBarId -Activity $ActivityName -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -Status $Status -CurrentOperation $CurrentOp
 						
 						<#
 						Write-Progress
@@ -270,51 +353,25 @@ Function Start-SleepTimer {
 						
 						#$i = $i + $RefreshRate
 						
-						#} until ($i -ge ($SecondsToCount - 30) )
-					} until ($SecondsCounter -ge ($SecondsToCount - 30) )
+						#} until ($SecondsCounter -ge ($SecondsToCount - 30) )
+					} until ($SecondsCounter -ge $SecondsToCount)
+					
+					Write-Progress -Id $ProgressBarId -Activity $ActivityName -Completed
+					
+					Write-Verbose "Progress bar counter completed."
 					
 				}
 				Default {}
-			}
-			do {
-				Clear-Host #cls
-				
-				$SecondsCounter = $SecondsCounter + $RefreshRate
-				$TimeLeft = New-TimeSpan -Seconds ($SecondsToCount - $SecondsCounter)
-				
-				#https://devblogs.microsoft.com/scripting/use-powershell-and-conditional-formatting-to-format-time-spans/
-				#$CountdownLabel = "{0:c}" -f $TimeLeft
-				$CountdownLabel = "{0:g}" -f $TimeLeft
-				#$CountdownLabel = "{0:G}" -f $TimeLeft
-				
-				Write-Progress -Id $ProgressBarId -Activity "$ActionVerb device at $EndTimeLong" -Status "$ActionVerb device in $CountdownLabel - ($SecondsCounter / $SecondsToCount)" -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -CurrentOperation "Counting down $TimerDuration to $EndTimeShort before $ActionVerb..."
-				
-				<#
-				Write-Progress
-				     [-Activity] <String>
-				     [[-Status] <String>]
-				     [[-Id] <Int32>]
-				     [-PercentComplete <Int32>]
-				     [-SecondsRemaining <Int32>]
-				     [-CurrentOperation <String>]
-				     [-ParentId <Int32>]
-				     [-Completed]
-				     [-SourceId <Int32>]
-				     [<CommonParameters>]
-				#>
-				
-				Start-Sleep -Seconds $RefreshRate
-				
-				#$i = $i + $RefreshRate
-				
-				#} until ($i -ge ($SecondsToCount - 30) )
-			} until ($SecondsCounter -ge ($SecondsToCount - 30) )
+			} # End switch ($CounterMetod)
+			
+			Write-Verbose "$ActionVerb computer . . ."
 			
 			PAUSE
 			
 			Set-PowerState -Action $Action @SetPowerStateParams @CommonParameters
 			
 			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+			
 		}
 		1 {
 			Write-Verbose "Using [Stopwatch] object method:"
@@ -339,8 +396,6 @@ Function Start-SleepTimer {
 			Throw "Incorrectly definfed method: '$Method'"
 		}
 	}
-	
-	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return
 } # End of Start-SleepTimer function.
