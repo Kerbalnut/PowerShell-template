@@ -67,6 +67,111 @@ Function Set-PowerState {
 #-----------------------------------------------------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------------------------------------------------
+Function Format-ShortTimeString {
+	<#
+	.EXAMPLE
+	Format-ShortTimeString -Seconds 59
+	Format-ShortTimeString -Seconds 60
+	Format-ShortTimeString -Seconds 61
+	Format-ShortTimeString -Seconds 299
+	Format-ShortTimeString -Seconds 61 -Round
+	Format-ShortTimeString -Seconds 299 -Round
+	Format-ShortTimeString -Seconds 3600
+	Format-ShortTimeString -Seconds 5400
+	Format-ShortTimeString -Seconds 7200
+	Format-ShortTimeString -Seconds 86399
+	Format-ShortTimeString -Seconds 86400
+	Format-ShortTimeString -Seconds 86401
+	Format-ShortTimeString -Seconds 88200
+	Format-ShortTimeString -Seconds 90000
+	Format-ShortTimeString -Seconds 91800
+	Format-ShortTimeString -Seconds 93600
+	
+	Format-ShortTimeString -Seconds 86329
+	Format-ShortTimeString -Seconds 86330
+	Format-ShortTimeString -Seconds 86331
+	Format-ShortTimeString -Seconds 86399
+	Format-ShortTimeString -Seconds 86400
+	Format-ShortTimeString -Seconds 86429
+	Format-ShortTimeString -Seconds 86430
+	Format-ShortTimeString -Seconds 86431
+	
+	Format-ShortTimeString -Seconds 86329 -Round
+	Format-ShortTimeString -Seconds 86330 -Round
+	Format-ShortTimeString -Seconds 86331 -Round
+	Format-ShortTimeString -Seconds 86399 -Round
+	Format-ShortTimeString -Seconds 86400 -Round
+	Format-ShortTimeString -Seconds 86429 -Round
+	Format-ShortTimeString -Seconds 86430 -Round
+	Format-ShortTimeString -Seconds 86431 -Round
+	
+	Format-ShortTimeString -Seconds 93529
+	Format-ShortTimeString -Seconds 93530
+	Format-ShortTimeString -Seconds 93531
+	Format-ShortTimeString -Seconds 93599
+	Format-ShortTimeString -Seconds 93600
+	Format-ShortTimeString -Seconds 93629
+	Format-ShortTimeString -Seconds 93630
+	Format-ShortTimeString -Seconds 93631
+	#>
+	[CmdletBinding()]
+	Param (
+		[Parameter(Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True)]
+		[Alias('Second','s')]
+		[int]$Seconds,
+		
+		[Switch]$Round
+	)
+	
+	$TS = New-TimeSpan -Seconds $Seconds
+	
+	If ($TS.TotalSeconds -le 60) {
+		$Result = "$([math]::Round($TS.TotalSeconds,1))" + "s"
+	} Else {
+		If ($TS.TotalMinutes -lt 60) {
+			If ($TS.Seconds -eq 0 -Or $Round) {
+				$Result = "$([math]::Round($TS.TotalMinutes,1))" + "m"
+			} Else {
+				$Result = "$($TS.Minutes)m $($TS.Seconds)s"
+			}
+		} Else {
+			If ($TS.TotalHours -lt 24) {
+				If ($([math]::Round($TS.TotalMinutes,0)) -eq 1440) {
+					$Result = "24h"
+				} Else {
+					If ($TS.Minutes -eq 0) {
+						$Result = "$($TS.Hours)h"
+					} Else {
+						$Result = "$($TS.Hours)h $($TS.Minutes)m"
+					}
+				}
+			} ElseIf ($([math]::Round($TS.TotalMinutes,0)) -eq 1440) {
+				$Result = "24h"
+			} Else {
+				If ($TS.Minutes -eq 0) {
+					If ($TS.Hours -eq 0) {
+						$Result = "$($TS.Days)d"
+					} Else {
+						$Result = "$($TS.Hours)h $($TS.Minutes)m"
+						$Result = "$($TS.Days)d $($TS.Hours)h"
+					}
+				} Else {
+					If ($TS.Hours -eq 0) {
+						$Result = "$($TS.Days)d $($TS.Minutes)m"
+					} Else {
+						$Result = "$($TS.Days)d $($TS.Hours)h $($TS.Minutes)m"
+					} # End If ($TS.Hours -eq 0)
+				} # End If ($TS.Minutes -eq 0)
+			} # End If ($TS.TotalHours -lt 24)
+		} # End If ($TS.TotalMinutes -lt 60)
+	} # End If ($TS.TotalSeconds -le 60)
+	
+	Return $Result
+} # End 
+#-----------------------------------------------------------------------------------------------------------------------
+
+
+#-----------------------------------------------------------------------------------------------------------------------
 Function Start-SleepTimer {
 	<#
 	.SYNOPSIS
@@ -76,6 +181,8 @@ Function Start-SleepTimer {
 	.PARAMETER TimerDuration
 	Takes [TimeSpan] type input values. For example, like the output given by `New-TimeSpan` command.
 	By default this function uses: (New-TimeSpan -Hours 2 -Minutes 30)
+	.PARAMETER TicsBeforeCounterResync
+	For methods that rely on wait operations from PowerShell loops, this value will determine how many seconds into the time count loop before this function corrects itself based on end time calculated at the beginning of execution.
 	.NOTES
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
 	
@@ -83,9 +190,14 @@ Function Start-SleepTimer {
 	.EXAMPLE
 	Start-SleepTimer -Hours 2 -Minutes 30 -Action 'sleep'
 	Starts a sleep countdown timer for 2 hours and 30 minutes from now. 
+	
+	Start-SleepTimer -Hours 2 -Minutes 30 -Action 'sleep' -TicsBeforeCounterResync 59
+	Start-SleepTimer -Hours 2 -Minutes 30 -Action 'sleep' -TicsBeforeCounterResync 9
 	.EXAMPLE
-	Start-SleepTimer -TimerDuration (New-TimeSpan -Seconds 10) -Verbose
-	Sets a sleep timer for 10 seconds from now. The default action is to sleep/suspend the system, so no -Action parameter is required.
+	Start-SleepTimer -TimerDuration (New-TimeSpan -Seconds 10) -TicsBeforeCounterResync 9 -Verbose
+	Sets a sleep timer for 10 seconds from now. The default action is to sleep/suspend the system, so the -Action parameter is not required.
+	
+	Start-SleepTimer -TimerDuration (New-TimeSpan -Seconds 60) -TicsBeforeCounterResync 9 -Verbose
 	.EXAMPLE
 	Start-SleepTimer -DateTime (Get-Date -Hour (12 + 8) -Minute 0 -Second 0) -Verbose -Action 'Hibernate'
 	Sets a hibernate timer for 8 PM.
@@ -94,7 +206,8 @@ Function Start-SleepTimer {
 	#>
 	[Alias("Set-SleepTimer")]
 	#Requires -Version 3
-	[CmdletBinding(DefaultParameterSetName = 'Timer')]
+	#[CmdletBinding(DefaultParameterSetName = 'Timer')]
+	[CmdletBinding(DefaultParameterSetName = 'HoursMins')]
 	Param(
 		[Parameter(Mandatory = $True, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'DateTime')]
 		[ValidateNotNullOrEmpty()]
@@ -104,14 +217,14 @@ Function Start-SleepTimer {
 		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'Timer')]
 		[ValidateNotNullOrEmpty()]
 		[Alias('SleepTimer','Timer')]
-		#[TimeSpan]$TimerDuration = (New-TimeSpan -Hours 2 -Minutes 30),
+		[TimeSpan]$TimerDuration = (New-TimeSpan -Hours 2 -Minutes 0),
 		#[TimeSpan]$TimerDuration = (New-TimeSpan -Minutes 3),
-		[TimeSpan]$TimerDuration = (New-TimeSpan -Seconds 10),
+		#[TimeSpan]$TimerDuration = (New-TimeSpan -Seconds 10),
 		
-		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
+		[Parameter(Mandatory = $True, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
 		[Int32]$Hours,
 		
-		[Parameter(Mandatory = $False, Position = 1, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
+		[Parameter(Mandatory = $True, Position = 1, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
 		[Alias('Mins')]
 		[Int32]$Minutes,
 		
@@ -121,7 +234,10 @@ Function Start-SleepTimer {
 		[String]$Action = 'Sleep',
 		
 		[Switch]$DisableWake,
-		[Switch]$Force
+		[Switch]$Force,
+		
+		[int]$TicsBeforeCounterResync = 299
+		#[int]$TicsBeforeCounterResync = 9
 		
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -149,7 +265,7 @@ Function Start-SleepTimer {
 		If ($Minutes) { $TimeSpanParams += @{Minutes = $Minutes} }
 		
 		$TimerDuration = New-TimeSpan @TimeSpanParams @CommonParameters
-		
+		[DateTime]$EndTime = [DateTime]$StartTime + [TimeSpan]$TimerDuration
 	} ElseIf ($TimerDuration) {
 		Write-Verbose "ParameterSet selected: 'Timer'"
 		[DateTime]$EndTime = [DateTime]$StartTime + [TimeSpan]$TimerDuration
@@ -173,7 +289,9 @@ Function Start-SleepTimer {
 			$RefreshRate = 1 # in seconds
 			$RefreshRateFast = 200
 			$RefreshRateSlow = 5
-			$TicsBeforeCounterRefresh = 9
+			#$TicsBeforeCounterResync = 9
+			#$TicsBeforeCounterResync = 59
+			#$TicsBeforeCounterResync = 299
 			$HeaderBreaks = 5
 			$ProgressBarId = 0
 			
@@ -207,7 +325,7 @@ Function Start-SleepTimer {
 					Return $NewlineSpace
 				}
 			} # End Function Get-NewlineSpacer
-			$HeaderLineBreaks = Get-NewlineSpacer -LineBreaks $HeaderBreaks
+			#$HeaderLineBreaks = Get-NewlineSpacer -LineBreaks $HeaderBreaks
 			
 			Function Get-ProgressBarTest {
 				<#
@@ -269,9 +387,10 @@ Function Start-SleepTimer {
 				0 {
 					Write-Verbose "Write-Progress method:"
 					$ActivityName = "$ActionVerb device at $EndTimeLong - (Ctrl + C to Cancel)"
-					$j = 0 # Clock re-sync counter, used with $TicsBeforeCounterRefresh
+					$j = 0 # Clock re-sync counter, used with $TicsBeforeCounterResync
 					$k = 0 # Re-sync operation counter
 					$FloatTimeTotal = 0
+					$ResyncTimeLabel = Format-ShortTimeString -Seconds $TicsBeforeCounterResync -Round
 					do {
 						#Clear-Host #cls
 						
@@ -289,7 +408,7 @@ Function Start-SleepTimer {
 						
 						$PercentageComplete = ($SecondsCounter / $SecondsToCount).ToString("P")
 						
-						If ($j -lt $TicsBeforeCounterRefresh) {
+						If ($j -lt $TicsBeforeCounterResync) {
 							$j++
 							$Status = "Counting at $StartTimeShort for $OrigTimerDuration every $RefreshRate second(s) from $TimerDurationWhole down to $EndTimeShort before $ActionVerb..."
 							If ($SecondsToCount -ne $OrigSecondsToCount) {
@@ -298,16 +417,11 @@ Function Start-SleepTimer {
 								$SecondsToCountLabel = "$SecondsToCount (orig $OrigSecondsToCount $Diff)"
 							} Else {
 								$SecondsToCountLabel = $SecondsToCount
-							}
-							If ($k -gt 0) {
-								$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter / $SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterRefresh, done $k time(s), drift: $FloatSeconds cumulative: $FloatTimeTotal"
-							} Else {
-								$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterRefresh"
+								#$SecondsToCountLabel = ""
 							}
 						} Else {
 							$j = 0
 							$k++
-							$Status = "Re-syncing timer with $EndTimeShort deadline... (done $k times)"
 							
 							#[TimeSpan]$NewTimerDurationWhole = [DateTime]$EndTime - (Get-Date -Millisecond 0)
 							[TimeSpan]$NewTimerDuration = [DateTime]$EndTime - (Get-Date)
@@ -319,11 +433,11 @@ Function Start-SleepTimer {
 							$SecondsCounterRemaining = $SecondsToCount - $SecondsCounter
 							
 							If ($NewSecondsToCount -lt $SecondsCounterRemaining) {
-								$CurrentOp = "Shortening float counter by $([math]::Round(( $SecondsCounterRemaining - $NewSecondsToCount ),1)) second(s)."
+								$Status = "Re-syncing timer with $EndTimeShort deadline... (done $k times) - Shortening float counter by $([math]::Round(( $SecondsCounterRemaining - $NewSecondsToCount ),1))"
 							} ElseIf ($NewSecondsToCount -gt $SecondsCounterRemaining) {
-								$CurrentOp = "Lengthening float counter by $([math]::Round(( $NewSecondsToCount - $SecondsCounterRemaining ),1)) second(s)."
+								$Status = "Re-syncing timer with $EndTimeShort deadline... (done $k times) - Lengthening float counter by $([math]::Round(( $NewSecondsToCount - $SecondsCounterRemaining ),1))"
 							} ElseIf ($NewSecondsToCount -eq $SecondsCounterRemaining) {
-								$CurrentOp = "No adjustment needed!"
+								$Status = "Re-syncing timer with $EndTimeShort deadline... (done $k times) - No adjustment needed!"
 							}
 							
 							$FloatTimeTotal = [math]::Round(( $FloatTimeTotal + $FloatSeconds ),1)
@@ -338,7 +452,13 @@ Function Start-SleepTimer {
 								$SecondsToCount = ( [math]::Round($NewSecondsToCount,0) + $SecondsCounter )
 							}
 							
-						} # End If/Else ($j -lt $TicsBeforeCounterRefresh)
+						} # End If/Else ($j -lt $TicsBeforeCounterResync)
+						
+						If ($k -gt 0) {
+							$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterResync, done $k time(s) every $ResyncTimeLabel, drift: $FloatSeconds cumulative: $FloatTimeTotal"
+						} Else {
+							$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterResync"
+						}
 						
 						Write-Progress -Id $ProgressBarId -Activity $ActivityName -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -Status $Status -CurrentOperation $CurrentOp
 						
