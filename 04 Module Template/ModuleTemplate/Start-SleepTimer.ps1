@@ -311,7 +311,7 @@ Function Start-SleepTimer {
 				.EXAMPLE
 				$NewlineSpace = Get-NewlineSpacer -LineBreaks 5
 				$HeaderLineBreaks = Get-NewlineSpacer -LineBreaks $HeaderBreaks
-				#>`
+				#>
 				$NewlineSpace = ""
 				If ($LineBreaks -gt 0) {
 					for ($i = 0; $i -lt $LineBreaks; $i++) {
