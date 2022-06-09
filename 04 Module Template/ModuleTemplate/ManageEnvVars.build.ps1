@@ -50,6 +50,7 @@ Param(
 	HelpMessage = "Describes the contents of the module.")]
 	$Description = "",
 	
+	[Parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True)]
 	$ReleaseNotes,
 	
 	[String]$Author = "Kerbalnut",

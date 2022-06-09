@@ -491,7 +491,7 @@ Function Start-SleepTimer {
 			
 			Write-Verbose "$ActionVerb computer . . ."
 			
-			PAUSE
+			#PAUSE
 			
 			Set-PowerState -Action $Action @SetPowerStateParams @CommonParameters
 			
