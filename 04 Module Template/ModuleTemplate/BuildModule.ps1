@@ -17,15 +17,15 @@ Function Get-FunctionName {
 Function Get-ModuleCommandInfo {
 	<#
 	.SYNOPSIS
-	Returns all commands and aliases in a PowerShell script.
+	Returns all commands and aliases from a given PowerShell script file.
 	.DESCRIPTION
-	Returns Get-Command results, but for any PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code.
+	Returns Get-Command results, but for any PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code. (It compiles/can be loaded without any terminating errors.)
 	.NOTES
 	.PARAMETER TempFileSuffix
-	This function creates a temporary .psm1 module file to load from, with a custom suffix to avoid conflicts with the original file.
+	This function creates a temporary .psm1 module file to load from with a custom suffix, in order to avoid any conflicts with the originally named module if already imported.
 	Use this parameter to adjust the suffix string.
 	By default, this value is usually set as either "_GetFunctions" or "_GetAliases".
-	For example, the file "HelloWorld.ps1" would use the temporary filename "HelloWorld_GetFunctions.psm1" for operation.
+	For example, the file "HelloWorld.ps1" would become the temporary filename "HelloWorld_GetFunctions.psm1" for operation.
 	.EXAMPLE
 	Get-ModuleCommandInfo -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
 	
