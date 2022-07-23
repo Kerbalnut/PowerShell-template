@@ -9,7 +9,7 @@
 :: 5. :DefineFunctions
 
 REM Bugfix: Use "REM ECHO DEBUG*ING: " instead of "::ECHO DEBUG*ING: " to comment-out debugging lines, in case any are within IF statements.
-REM ECHO DEBUGGING: Begin RunAsAdministrator block.
+ECHO DEBUGGING: Begin RunAsAdministrator block.
 
 :RunAsAdministrator
 :: SS64 Run with elevated permissions script (ElevateMe.vbs)
@@ -17,19 +17,19 @@ REM ECHO DEBUGGING: Begin RunAsAdministrator block.
 :-------------------------------------------------------------------------------
 :: First check if we are running As Admin/Elevated
 FSUTIL dirty query %SystemDrive% >nul
-IF %ERRORLEVEL% EQU 0 GOTO START
+IF %ERRORLEVEL% EQU 0 SET "_ADMIN=TRUE" & GOTO START
 
-::GOTO START & REM <-- Leave this line in to always skip Elevation Prompt -->
-GOTO NOCHOICE & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
+::GOTO NOADMIN & REM <-- Leave this line in to always skip Elevation Prompt -->
+::GOTO RUNASADMIN & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
 :: Comment out both GOTO statements to prompt user to elevate.
 ECHO:
 ECHO CHOICE Loading...
 ECHO:
 :: https://ss64.com/nt/choice.html
 CHOICE /M "Run as Administrator? (CMD.EXE/VBScript elevation)"
-IF ERRORLEVEL 2 GOTO START & REM No.
+IF ERRORLEVEL 2 GOTO NOADMIN & REM No.
 IF ERRORLEVEL 1 REM Yes.
-:NOCHOICE
+:RUNASADMIN
 
 :: wait 2 seconds, in case this user is not in Administrators group. (To prevent an infinite loop of UAC admin requests on a restricted user account.)
 ECHO Requesting administrative privileges... ^(waiting 2 seconds^)
@@ -60,6 +60,9 @@ PING -n 3 127.0.0.1 > nul
 	cscript "%Temp%\~ElevateMe.vbs" 
 	EXIT /B
 
+GOTO START
+:NOADMIN
+SET "_ADMIN=FALSE"
 :START
 :: set the current directory to the batch file location
 ::CD /D %~dp0
@@ -81,10 +84,16 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 :: Param2 = Run-as-administrator, Override user-prompt with default choice: 
 
+IF /I NOT "%_ADMIN%"=="TRUE" (
+	SET "_ADMIN_OPTION=RunAsAdministrator"
+) ELSE (
+	SET "_ADMIN_OPTION=RunNonElevated"
+)
+
 :: Set as either "RunNonElevated" or "RunAsAdministrator"
 :: Set as Blank String to always prompt user
-SET "_ADMIN_OPTION=RunNonElevated"
-SET "_ADMIN_OPTION=RunAsAdministrator"
+::SET "_ADMIN_OPTION=RunNonElevated"
+::SET "_ADMIN_OPTION=RunAsAdministrator"
 ::SET "_ADMIN_OPTION="
 
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -150,7 +159,7 @@ REM ============================================================================
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 :Main
 
-REM ECHO DEBUGGING: Beginning Main execution block.
+ECHO DEBUGGING: Beginning Main execution block.
 
 ::Index of Main:
 
@@ -216,7 +225,7 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 :ExampleHelp
 :: Skip Example Help lookup
 IF /I "%_SHOW_EXAMPLE_HELP%"=="No" (
-	ECHO Skipping %_EXAMPLE_HELP_COMMAND% example help command 
+	ECHO DEBUGGING: Skipping %_EXAMPLE_HELP_COMMAND% example help command 
 	GOTO ScriptHelp & REM Comment out this line to display help before loading script
 )
 ECHO -------------------------------------------------------------------------------
@@ -239,7 +248,7 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 :ScriptHelp
 :: Skip Help lookup
 IF /I "%_SHOW_HELP%"=="No" (
-	ECHO Skipping %_PowerShellFile_NAME% help command 
+	ECHO DEBUGGING: Skipping %_PowerShellFile_NAME% help command 
 	GOTO MainMenu & REM Comment out this line to display help before loading script
 )
 ECHO -------------------------------------------------------------------------------
@@ -278,6 +287,7 @@ CALL :GetWindowsVersion
 ECHO:
 
 :ChooseAdminOptions
+ECHO DEBUGGING: "%%_ADMIN_OPTION%%" = "%_ADMIN_OPTION%"
 IF /I "%_ADMIN_OPTION%"=="RunNonElevated" GOTO ChooseRunOptions
 IF /I "%_ADMIN_OPTION%"=="RunAsAdministrator" GOTO ChooseRunOptions
 CALL :GetIfAdmin NoEcho
@@ -490,7 +500,7 @@ EXIT /B & REM If you call this program from the command line and want it to retu
 
 REM -------------------------------------------------------------------------------
 
-REM ECHO DEBUGGING: Begin DefineFunctions block.
+ECHO DEBUGGING: Begin DefineFunctions block.
 
 :DefineFunctions
 :: Declare Functions
