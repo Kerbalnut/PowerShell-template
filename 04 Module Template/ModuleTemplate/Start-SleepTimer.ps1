@@ -236,6 +236,7 @@ Function Start-SleepTimer {
 		[Switch]$DisableWake,
 		[Switch]$Force,
 		
+		[Alias('Resync')]
 		[int]$TicsBeforeCounterResync = 299
 		#[int]$TicsBeforeCounterResync = 9
 		
@@ -410,7 +411,7 @@ Function Start-SleepTimer {
 						
 						If ($j -lt $TicsBeforeCounterResync) {
 							$j++
-							$Status = "Counting at $StartTimeShort for $OrigTimerDuration every $RefreshRate second(s) from $TimerDurationWhole down to $EndTimeShort before $ActionVerb..."
+							$Status = "Counting from $StartTimeShort every $RefreshRate second(s) for $TimerDurationWhole (orignally $OrigTimerDuration) up to $EndTimeShort before $ActionVerb..."
 							If ($SecondsToCount -ne $OrigSecondsToCount) {
 								$Diff = $SecondsToCount - $OrigSecondsToCount
 								If ($Diff -ge 0) {$Diff = "+$Diff"}
@@ -455,9 +456,9 @@ Function Start-SleepTimer {
 						} # End If/Else ($j -lt $TicsBeforeCounterResync)
 						
 						If ($k -gt 0) {
-							$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterResync, done $k time(s) every $ResyncTimeLabel, drift: $FloatSeconds cumulative: $FloatTimeTotal"
+							$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync'd $k time(s), once every $ResyncTimeLabel ($j/$TicsBeforeCounterResync), drift: $FloatSeconds cumulative: $FloatTimeTotal"
 						} Else {
-							$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync: $j/$TicsBeforeCounterResync"
+							$CurrentOp = "$ActionVerb device in $CountdownLabel - $CountUpLabel - $PercentageComplete - Count: $SecondsCounter/$SecondsToCountLabel - Re-sync every $ResyncTimeLabel ($j/$TicsBeforeCounterResync)"
 						}
 						
 						Write-Progress -Id $ProgressBarId -Activity $ActivityName -PercentComplete (($SecondsCounter / $SecondsToCount)*100) -Status $Status -CurrentOperation $CurrentOp

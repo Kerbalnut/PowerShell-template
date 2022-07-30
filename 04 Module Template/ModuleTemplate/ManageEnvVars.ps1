@@ -261,6 +261,11 @@ Function New-TaskTrackingInitiativeTEST {
 	Maybe some original author credits as well.
 	
 	Function New-TaskTrackingInitiative is where this template is based from.
+	
+	.PARAMETER WhatIf
+	.PARAMETER Confirm
+	.EXAMPLE
+	New-TaskTrackingInitiativeTEST -WhatIf -Confirm
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
@@ -274,8 +279,18 @@ Function New-TaskTrackingInitiativeTEST {
 		           ParameterSetName = "Path")]
 		[ValidateNotNullOrEmpty()]
 		[Alias('ProjectPath','p')]
-		[String]$Path
+		[String]$Path,
 		
+		[switch]$WhatIf,
+		#[switch]$WhatIfPreference,
+		#[System.Management.Automation.ActionPreference]$WhatIfPreference,
+		
+		#[System.Management.Automation.ActionPreference]
+		
+		[switch]$Confirm
+		#$ConfirmPreference
+		
+		#[switch]$ConfirmPreference
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	$CommonParameters = @{
@@ -284,6 +299,8 @@ Function New-TaskTrackingInitiativeTEST {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
+	Write-Host "Whatif: $WhatIfPreference"
+	Write-Host "Confirm: $ConfirmPreference"
 	function Sub-Function1 
 	{}
 	fUNCTION Sub-Function2 {
