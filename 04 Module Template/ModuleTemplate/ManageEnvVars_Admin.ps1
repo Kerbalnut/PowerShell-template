@@ -1076,7 +1076,13 @@ Function New-TaskTrackingInitiativeTEST {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	
+	function Sub-Function1 
+	{}
+	fUNCTION Sub-Function2 {
+		fUnCtIoN Sub-Function3 {}
+		fUnCtIoN Sub-Function4 
+		{}
+	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return

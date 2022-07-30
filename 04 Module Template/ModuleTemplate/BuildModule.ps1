@@ -19,19 +19,34 @@ Function Get-ModuleCommandInfo {
 	.SYNOPSIS
 	Returns all commands and aliases from a given PowerShell script file.
 	.DESCRIPTION
-	Returns Get-Command results, but for any PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code. (It compiles/can be loaded without any terminating errors.)
+	Returns Get-Command results, but for any PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code. (It compiles/Can be loaded without any terminating errors.) Use the -NoVerification switch to turn this behavior off.
 	.NOTES
 	.PARAMETER TempFileSuffix
-	This function creates a temporary .psm1 module file to load from with a custom suffix, in order to avoid any conflicts with the originally named module if already imported.
+	This function creates a temporary .psm1 module file to load from with a custom suffix name, in order to avoid any conflicts with the originally named module if it's already imported.
 	Use this parameter to adjust the suffix string.
 	By default, this value is usually set as either "_GetFunctions" or "_GetAliases".
 	For example, the file "HelloWorld.ps1" would become the temporary filename "HelloWorld_GetFunctions.psm1" for operation.
+	.PARAMETER NoVerification
+	Turns off validation of PowerShell code before returning results. This method will rely exclusively on regex filters for function name discovery.
+	.PARAMETER IncludeSubFunctions
+	Includes discovery of sub-functions nested inside other functions.
+	.PARAMETER NoSubFunctions
+	Excludes sub-functions nested inside other functions.
+	.PARAMETER RawOutput
+	Prevents simplifying of output object type. Normally Get-Command output creates a [System.Management.Automation.FunctionInfo] array with [System.Management.Automation.AliasInfo] and [System.Management.Automation.FunctionInfo] objects. This switch will also prevent sub-functions nested inside other functions from being discovered.
 	.EXAMPLE
-	Get-ModuleCommandInfo -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
 	
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1" -Verbose
+	.EXAMPLE
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoVerification -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -IncludeSubFunctions -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoSubFunctions -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -RawOutput -Verbose
 	#>
-	[CmdletBinding()]
+	[CmdletBinding(DefaultParameterSetName = "")]
 	Param(
 		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
@@ -41,7 +56,16 @@ Function Get-ModuleCommandInfo {
 		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
 		[String]$Path,
 		
-		[String]$TempFileSuffix = "_GetFunctions"
+		[String]$TempFileSuffix = "_GetFunctions",
+		
+		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Switch]$NoVerification,
+		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Switch]$IncludeSubFunctions,
+		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Switch]$NoSubFunctions,
+		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Switch]$RawOutput
 	)
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	$CommonParameters = @{
@@ -137,23 +161,156 @@ Function Get-ModuleCommandInfo {
 		} # End switch
 	} # End If ($FileExtension -ne '')
 	
-	$NewPath = $NoExtension + $TempFileSuffix + ".psm1"
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	Copy-Item -Path $Path -Destination $NewPath @CommonParameters
-	Start-Sleep -Milliseconds 60
+	$DefaultBehavior = ""
 	
-	Import-Module $NewPath @CommonParameters
-	Start-Sleep -Milliseconds 60
-	
-	$ModuleInfo = Get-Command -Module ("$FileNameNoExtension" + "$TempFileSuffix") @CommonParameters
-	Start-Sleep -Milliseconds 60
-	
-	Remove-Module -Name ("$FileNameNoExtension" + "$TempFileSuffix")
-	
-	Remove-Item -Path $NewPath
+	If ($IncludeSubFunctions -And $NoSubFunctions) {
+		$IncludeSubFunctions = $False
+		$NoSubFunctions = $True
+	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	Return $ModuleInfo
+	
+	# Get info via module import:
+	
+	$NewPath = $NoExtension + $TempFileSuffix + ".psm1"
+	$TempModuleName = $FileNameNoExtension + $TempFileSuffix
+	
+	If (!($NoVerification)) {
+		
+		If ((Test-Path -Path $NewPath)) {
+			Write-Warning "Temp module path already exists. Deleting: $TempModuleName.psm1"
+			Remove-Item -Path $NewPath -Force @CommonParameters
+		}
+		
+		Copy-Item -Path $Path -Destination $NewPath @CommonParameters
+		Start-Sleep -Milliseconds 60
+		
+		Import-Module $NewPath @CommonParameters
+		Start-Sleep -Milliseconds 60
+		
+		$ModuleInfo = Get-Command -Module $TempModuleName @CommonParameters
+		Start-Sleep -Milliseconds 60
+		
+		ForEach ($Module in ((Get-Module).Name)) {
+			If ($Module -eq $TempModuleName) {
+				Try {
+					Remove-Module -Name $TempModuleName @CommonParameters
+				} Catch {
+					Write-Warning "No modules ($TempModuleName) were removed."
+				}
+			}
+		}
+		
+		If ((Test-Path -Path $NewPath)) {
+			Remove-Item -Path $NewPath -Force @CommonParameters
+		} Else {
+			Write-Warning "Temp module path does not exist: `"$NewPath`""
+		}
+	} # End If (!($NoVerification))
+	
+	If ($RawOutput) {
+		Return $ModuleInfo
+	}
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	# Get sub-functions via regex:
+	
+	If (!($NoSubFunctions) -And !($RawOutput)) {
+		
+		#Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
+		
+		$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+		
+		$FileText = (Get-Content -Path $Path | Out-String).Trim()
+		
+		$NoMultiLineComments = $FileText -replace '(?si)<#.*?#>',''
+		# Regex: (?si)<#.*?#>
+		#  (?i)      s modifier: single line. Dot matches newline characters. i modifier: Case insensitive match.
+		#  <#        matches the characters "<#" literally
+		#  .*?       . matches any character, * modifier matches between zero and unlimited times (by default, greedy), ? modifier forces lazy matches (as few times as possible)
+		#  #>        matches the characters "#>" literally
+		
+		$TempFile = "$env:TEMP\DELETE_ME_Get-ModuleCommandInfo_NoMultiLineComments.ps1"
+		
+		If ((Test-Path -Path $TempFile)) {Remove-Item -Path $TempFile -Force}
+		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
+		$CmdletResults = New-Item -Path $TempFile -ItemType File -Value $NoMultiLineComments
+		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
+		Set-Content -Path $TempFile -Value $NoMultiLineComments
+		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
+		If ($VerbosePreference -ne "SilentlyContinue") {Write-Host $CmdletResults}
+		
+		$FileText = Get-Content -Path $TempFile
+		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
+		If ((Test-Path -Path $TempFile)) {Remove-Item -Path $TempFile -Force}
+		
+		$NoSingleLineComments = $FileText -replace '\s*#.*',''
+		
+		$FullFunctionsList = $NoSingleLineComments | Select-String -Pattern '(?i)^\s*function\s+\w+'
+		# Regex: (?i)^\s*function\s+\w+
+		#  (?i)      i modifier: Case insensitive match (ignores case of [a-zA-Z])
+		#  ^         ^ asserts position at start of the string
+		#  \s*       \s matches any whitespace character, * modifier matches between zero and unlimited times
+		#  function  matches the text "function" literally
+		#  \s+       \s matches any whitespace character, + modifier matches between one and unlimited times
+		#  \w+       \w matches any word character, + modifier matches between one and unlimited times
+		
+		$FullFunctionsList = $FullFunctionsList -replace '{',''
+		$FullFunctionsList = $FullFunctionsList -replace '}',''
+		$FullFunctionsList = $FullFunctionsList -replace '(?i)\s*function\s+',''
+		$FullFunctionsList = $FullFunctionsList -replace '\s+',''
+	} # End If (!($NoSubFunctions) -And !($RawOutput))
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	# Convert module info data into a generic array that's easier to manipulate:
+	
+	$SimpleInfo = @()
+	ForEach ($Item in $ModuleInfo) {
+		$SimpleInfo += [PSCustomObject]@{
+			CommandType = $Item.CommandType
+			Name = $Item.Name
+			Version = $Item.Version
+			Source = $Item.Source
+		}
+	}
+	
+	If ($NoSubFunctions) {
+		Return $SimpleInfo
+	}
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	# Merge the 2 lists:
+	
+	If ($IncludeSubFunctions) {
+		ForEach ($RegexFunction in $FullFunctionsList) {
+			[Boolean]$AlreadyCaptured = $False
+			ForEach ($ImportedFunction in $SimpleInfo) {
+				If ($RegexFunction -eq ($ImportedFunction).Name) {
+					[Boolean]$AlreadyCaptured = $True
+				}
+			}
+			If (!($AlreadyCaptured)) {
+				$NewItem = [PSCustomObject]@{
+					CommandType = "Sub-function"
+					Name = $RegexFunction
+					Version = $null
+					Source = $TempModuleName
+				}
+				#$NewItem = @("Sub-function", $RegexFunction, $null, $TempModuleName)
+				$SimpleInfo += $NewItem
+			}
+		} # End ForEach ($RegexFunction in $FullFunctionsList)
+	} # End If ($IncludeSubFunctions)
+	
+	Return $SimpleInfo
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
 } # End of Get-ModuleCommandInfo function.
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -169,15 +326,15 @@ Function Get-FunctionsInScript {
 	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempFileSuffix parameter help text for info.
 	.EXAMPLE
 	Get-FunctionsInScript -Path $Path
-	Get-FunctionsInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
+	Get-FunctionsInScript -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
 	
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	.EXAMPLE
 	Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo -Verbose
 	
 	$ModuleInfo = Get-ModuleCommandInfo -Path $Path -Verbose
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1"
+	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1"
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
@@ -257,14 +414,14 @@ Function Get-AliasesInScript {
 	.PARAMETER TempFileSuffix
 	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempFileSuffix parameter help text for info.
 	.EXAMPLE
-	Get-AliasesInScript -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
+	Get-AliasesInScript -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
 	
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	.EXAMPLE
 	Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo -Verbose
 	
 	$ModuleInfo = Get-ModuleCommandInfo -Path $Path -Verbose
-	$Path = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
@@ -331,6 +488,60 @@ Function Get-AliasesInScript {
 } # End of Get-AliasesInScript function.
 Set-Alias -Name 'New-ProjectInitTEST' -Value 'Get-AliasesInScript'
 #-----------------------------------------------------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
+Function New-Shortcut {
+	<#
+	.SYNOPSIS
+	Single-line summary.
+	.DESCRIPTION
+	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
+	.NOTES
+	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
+	
+	Maybe some original author credits as well.
+	#>
+	[Alias("New-ProjectInitTEST")]
+	#Requires -Version 3
+	#[CmdletBinding()]
+	[CmdletBinding(DefaultParameterSetName = 'None')]
+	Param(
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "Path")]
+		[ValidateNotNullOrEmpty()]
+		[Alias('ProjectPath','p')]
+		[String]$Path
+		
+	)
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	$CommonParameters = @{
+		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
+		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
+	}
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	#https://docs.microsoft.com/en-us/powershell/scripting/samples/creating-.net-and-com-objects--new-object-?view=powershell-7.2
+	
+	# Creating a Desktop Shortcut with WScript.Shell
+	
+	# One task that can be performed quickly with a COM object is creating a shortcut. Suppose you want to create a shortcut on your desktop that links to the home folder for Windows PowerShell. You first need to create a reference to WScript.Shell, which we will store in a variable named $WshShell:
+	
+	$WshShell = New-Object -ComObject WScript.Shell
+	
+	$lnk = $WshShell.CreateShortcut("$Home\Desktop\PSHome.lnk")
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	Return
+} # End of New-Shortcut function.
+Set-Alias -Name 'New-ProjectInitTEST' -Value 'New-Shortcut'
+#-----------------------------------------------------------------------------------------------------------------------
+
+
+
+
 
 
 

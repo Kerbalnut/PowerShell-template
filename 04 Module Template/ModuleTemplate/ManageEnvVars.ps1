@@ -247,6 +247,7 @@ Set-Alias -Name 'Get-ModulePaths' -Value 'Get-PowershellModulePaths'
 
 
 
+
 #-----------------------------------------------------------------------------------------------------------------------
 Function New-TaskTrackingInitiativeTEST {
 	<#
@@ -258,6 +259,8 @@ Function New-TaskTrackingInitiativeTEST {
 	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
 	
 	Maybe some original author credits as well.
+	
+	Function New-TaskTrackingInitiative is where this template is based from.
 	#>
 	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
@@ -281,13 +284,24 @@ Function New-TaskTrackingInitiativeTEST {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	
+	function Sub-Function1 
+	{}
+	fUNCTION Sub-Function2 {
+		fUnCtIoN Sub-Function3 {}
+		fUnCtIoN Sub-Function4 
+		{}
+	}
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return
 } # End of New-TaskTrackingInitiativeTEST function.
 Set-Alias -Name 'New-ProjectInitTEST' -Value 'New-TaskTrackingInitiativeTEST'
 #-----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
 
 
 

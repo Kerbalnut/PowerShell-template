@@ -2,6 +2,7 @@
 .SYNOPSIS
 Controller script for building ManageEnvVars (and ManageEnvVars_Admin) modules.
 .DESCRIPTION
+#Requires -RunAsAdministrator because Get-ModuleCommandInfo function needs to load all files as modules to work, and this project contains modules that are Admin only.
 .PARAMETER FileNames
 List of module files to export for the module. These can be .ps1 files and they will still be exported as .psm1 files.
 .PARAMETER BuildFuncsName
@@ -21,8 +22,6 @@ Cmdlets vs. Functions:
 - Cmdlets are written in a compiled .NET language, while functions (and scripts) are written in the PowerShell language. On the plus side, this makes certain developer tasks (such as P/Invoke calls, working with generics) much easier in a cmdlet. On the minus side, this makes you pay the ‘compilation’ tax — making it slower to implement and evaluate new functionality.
 - In V1,  Cmdlets provide the author a great deal of support for parameter validation, and tentative processing (-WhatIf, -Confirm.) This is an implementation artifact, though, and could go away in the future.
 - [Various technical points] Functions support scoping, different naming guidelines, management through the function drive, etc. See your favourite scripting reference for these details.
-
-#Requires -RunAsAdministrator because Get-ModuleCommandInfo function needs to load all files as modules to work, and this project contains modules that are Admin only.
 #>
 #Requires -RunAsAdministrator
 [CmdletBinding()]
@@ -79,10 +78,37 @@ $CommonParameters = @{
 $ScriptName = $MyInvocation.MyCommand.Name
 Write-Host "Starting build script: `"$ScriptName`""
 $HomePath = $PSScriptRoot
-$HomePath = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
+#$HomePath = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
 
 Pause
 
+# Import build functions from BuildModule.ps1
+If ($BuildFuncsName -match '.+\..+') {$HasFileExtension = $True} Else {$HasFileExtension = $False}
+
+
+If ($HasFileExtension) {
+	
+	$Method = 0
+	switch ($Method) {
+		0 {
+			$FileExtension = [System.IO.Path]::GetExtension($Path)
+			
+			# Regex remove any . in $FileExtension
+			$FileExtension = $FileExtension -replace '^\.',''
+		}
+		1 {
+			$FileExtension = ((Split-Path -Path $Path -Leaf).Split('.'))[1]
+		}
+		2 {
+			$FileExtension = (Get-ChildItem -Path $Path).Extension
+			
+			# Regex remove any . in $FileExtension
+			$FileExtension = $FileExtension -replace '^\.',''
+		}
+		Default {Throw "Horrible error: Get file extension wrong `$Method: '$Method'"}
+	} # End switch
+	
+}
 $BuildFunctions = Join-Path -Path $HomePath -ChildPath $BuildFuncsName
 If ((Test-Path -Path $BuildFunctions)) {
 	Write-Verbose "Loading $BuildFuncsName . . . `"$BuildFunctions`""
@@ -97,7 +123,7 @@ If ((Test-Path -Path $BuildFunctions)) {
 	Throw "'$BuildFuncsName' script with additional (required) build functions could not be found: `"$BuildFunctions`""
 }
 
-$ExceptionFileName = "Exceptions.xml"
+#$ExceptionFileName = "Exceptions.xml"
 $ExceptionFile = Join-Path -Path $HomePath -ChildPath $ExceptionFileName
 
 If ((Test-Path -Path $ExceptionFile)) {
