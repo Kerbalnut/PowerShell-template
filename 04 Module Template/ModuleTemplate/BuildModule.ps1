@@ -20,13 +20,15 @@ Function Get-ModuleCommandInfo {
 	Returns all function names and aliases from a given PowerShell script file.
 	.DESCRIPTION
 	Relies on Get-Command results, but for any type of PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code. (It compiles/Can be loaded without any terminating errors.) Use the -NoVerification switch to turn this behavior off and exclusivly use a regex discovery method.
-	.PARAMETER TempFileSuffix
+	.PARAMETER TempModuleSuffix
 	This function creates a temporary .psm1 module file to load from with a custom suffix name, in order to avoid any conflicts with the originally named module if it's already imported.
 	Use this parameter to adjust the suffix string.
 	By default, this value is usually set as either "_GetFunctions" or "_GetAliases".
 	For example, the file "HelloWorld.ps1" would become the temporary filename "HelloWorld_GetFunctions.psm1" for operation.
 	
 	If -NoVerification switch is used this parameter becomes unnecessary.
+	.PARAMETER DontRemoveModule
+	Will leave temporarily-loaded modules imported after execution. Useful when used with a blank string for the -TempModuleSuffix "" parameter for testing modules that have a #Requires dependency on another module. To clean-up these modules after data is collected, run the same command again but without this -DontRemoveModule enabled.
 	.PARAMETER NoVerification
 	Turns off validation of PowerShell code before returning results. This method will rely exclusively on regex filters for function name discovery.
 	
@@ -69,7 +71,7 @@ Function Get-ModuleCommandInfo {
 		
 		[Parameter(ParameterSetName = "IncludeSubFuncs")]
 		[Parameter(ParameterSetName = "NoSubFuncs")]
-		[String]$TempFileSuffix = "_GetFunctions",
+		[String]$TempModuleSuffix = "_GetFunctions",
 		
 		[Parameter(ParameterSetName = "IncludeSubFuncs_NoVerification")]
 		[Parameter(ParameterSetName = "NoSubFuncs_NoVerification")]
@@ -199,8 +201,8 @@ Function Get-ModuleCommandInfo {
 	
 	# Get info via module import:
 	
-	$NewPath = $NoExtension + $TempFileSuffix + ".psm1"
-	$TempModuleName = $FileNameNoExtension + $TempFileSuffix
+	$NewPath = $NoExtension + $TempModuleSuffix + ".psm1"
+	$TempModuleName = $FileNameNoExtension + $TempModuleSuffix
 	
 	If (!($NoVerification)) {
 		
@@ -402,11 +404,11 @@ Function Get-FunctionsInScript {
 	.DESCRIPTION
 	This is an alias function for Get-ModuleCommandInfo, with output filtered to show function names. Use -ModuleCommandInfoObj parameter for filtering Get-ModuleCommandInfo output directly.
 	.NOTES
-	.PARAMETER TempFileSuffix
-	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempFileSuffix parameter help text for info.
+	.PARAMETER TempModuleSuffix
+	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempModuleSuffix parameter help text for info.
 	.EXAMPLE
 	Get-FunctionsInScript -Path $Path
-	Get-FunctionsInScript -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
+	Get-FunctionsInScript -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempModuleSuffix "_FindFuncs" -Verbose
 	
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	.EXAMPLE
@@ -431,7 +433,7 @@ Function Get-FunctionsInScript {
 		[Parameter(Mandatory = $False, Position = 1, 
 		           ValueFromPipelineByPropertyName = $True, 
 		           ParameterSetName = "Path")]
-		[String]$TempFileSuffix = "_GetFunctions",
+		[String]$TempModuleSuffix = "_GetFunctions",
 		
 		[Parameter(Mandatory = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
@@ -451,14 +453,14 @@ Function Get-FunctionsInScript {
 	switch ($Method) {
 		0 {
 			$FuncParams = @{
-				TempFileSuffix = $TempFileSuffix
+				TempModuleSuffix = $TempModuleSuffix
 			}
 		}
 		1 {
 			$FuncParams = @{}
 			
-			If ($TempFileSuffix) {
-				$FuncParams += @{Test2 = $TempFileSuffix}
+			If ($TempModuleSuffix) {
+				$FuncParams += @{Test2 = $TempModuleSuffix}
 			}
 		}
 		Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}
@@ -490,10 +492,10 @@ Function Get-AliasesInScript {
 	.DESCRIPTION
 	This is an alias function for Get-ModuleCommandInfo, with output filtered to show alias names. Use -ModuleCommandInfoObj parameter for filtering Get-ModuleCommandInfo output directly.
 	.NOTES
-	.PARAMETER TempFileSuffix
-	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempFileSuffix parameter help text for info.
+	.PARAMETER TempModuleSuffix
+	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempModuleSuffix parameter help text for info.
 	.EXAMPLE
-	Get-AliasesInScript -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempFileSuffix "_FindFuncs" -Verbose
+	Get-AliasesInScript -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempModuleSuffix "_FindFuncs" -Verbose
 	
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	.EXAMPLE
@@ -516,7 +518,7 @@ Function Get-AliasesInScript {
 		[Parameter(Mandatory = $False, Position = 1, 
 		           ValueFromPipelineByPropertyName = $True, 
 		           ParameterSetName = "Path")]
-		[String]$TempFileSuffix = "_GetAliases",
+		[String]$TempModuleSuffix = "_GetAliases",
 		
 		[Parameter(Mandatory = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
@@ -536,14 +538,14 @@ Function Get-AliasesInScript {
 	switch ($Method) {
 		0 {
 			$FuncParams = @{
-				TempFileSuffix = $TempFileSuffix
+				TempModuleSuffix = $TempModuleSuffix
 			}
 		}
 		1 {
 			$FuncParams = @{}
 			
-			If ($TempFileSuffix) {
-				$FuncParams += @{Test2 = $TempFileSuffix}
+			If ($TempModuleSuffix) {
+				$FuncParams += @{Test2 = $TempModuleSuffix}
 			}
 		}
 		Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}

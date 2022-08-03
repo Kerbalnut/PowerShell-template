@@ -137,27 +137,168 @@ Write-Verbose "Loading $BuildFuncsName complete."
 $ExceptionFile = Join-Path -Path $HomePath -ChildPath $ExceptionFileName
 If ($Exceptions) {Remove-Variable -Name Exceptions}
 
+$FalseString = "[ ]"
+$TrueString = "[X]"
+
+#[String[]]$FileNames = $(@("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1"))
+#$HomePath = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
+
+$CompleteModulesInfo = @()
+ForEach ($file in $FileNames) {
+	#$file = "ManageEnvVars.ps1"
+	#$file = "ManageEnvVars_Admin.ps1"
+	
+	$FullPath = Join-Path -Path $HomePath -ChildPath $file
+	#$ModuleInfo = Get-ModuleCommandInfo -Path $FullPath -NoSubFunctions -NoVerification @CommonParameters
+	$ModuleInfo = Get-ModuleCommandInfo -Path $FullPath -NoSubFunctions -TempModuleSuffix "" -DontRemoveModule @CommonParameters
+	$FunctionsList = Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo @CommonParameters
+	$AliasList = Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo @CommonParameters
+	Write-Host "$($file):"
+	#$ModuleInfo | Format-Table | Out-Host
+	$CompleteModulesInfo += $ModuleInfo
+}
+# Run same command again without -DontRemoveModule switch to remove modules.
+ForEach ($file in $FileNames) {
+	$null = Get-ModuleCommandInfo -Path $FullPath -NoSubFunctions -TempModuleSuffix "" @CommonParameters
+}
+
 If ((Test-Path -Path $ExceptionFile)) {
+	Write-Host "`n$($ExceptionFileName):"
+	$Display = Import-Clixml -Path $ExceptionFile
+	$Display | Format-Table | Out-Host
 	
 	# Ask user to load exceptions file
-	$Title = "Load $ExceptionFileName?"
+	$Title = "Load $($ExceptionFileName)?"
 	$Info = "Load the Exceptions file, modify it, or skip it?"
 	# Use Ampersand & in front of letter to designate that as the choice key. E.g. "&Yes" for Y, "Y&Ellow" for E.
 	$Load = New-Object System.Management.Automation.Host.ChoiceDescription "&Load", "Load all exception in $ExceptionFileName file"
 	$Modify = New-Object System.Management.Automation.Host.ChoiceDescription "&Edit", "Modify $ExceptionFileName file"
-	$Skip = New-Object System.Management.Automation.Host.ChoiceDescription "&Skip", "Skip loading the exceptions file, include all functions with no exceptions."
+	$Skip = New-Object System.Management.Automation.Host.ChoiceDescription "&Skip", "Skip loading the exceptions file, and include all functions in module(s) with no exceptions."
 	$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Load, $Modify, $Skip)
 	[int]$DefaultChoice = 0
 	$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
 	switch ($Result) {
 		0 {
-			Write-Verbose "Loading Exceptions file"
-			$Exceptions = Get-Content -Path $ExceptionFile
+			Write-Verbose "Loading Exceptions file: $ExceptionFileName (`"$ExceptionFile`")"
+			$Exceptions = Import-Clixml -Path $ExceptionFile
 		}
 		1 {
-			Write-Verbose "Modify $ExceptionFileName"
-			$Exceptions = Get-Content -Path $ExceptionFile
-			$EditExceptions = $True
+			Write-Verbose "Modifying $ExceptionFileName"
+			$Exceptions = Import-Clixml -Path $ExceptionFile
+			
+			# Build menu list:
+			$ExceptionsSelection = @()
+			$i = 0
+			ForEach ($Item in $CompleteModulesInfo) {
+				$i++
+				ForEach ($Exc in $Exceptions) {
+					Write-Verbose "Comparing `"$(([String]$Exc.ExceptionName).Trim())`" and `"$(([String]$Item.Name).Trim())`""
+					If ( ([String]$Exc.ExceptionName).Trim() -like ([String]$Item.Name).Trim() ) {
+						Write-Verbose "Comparing `"$(([String]$Exc.ExceptionType).Trim())`" and `"$(([String]$Item.CommandType).Trim())`""
+						If ( ([String]$Exc.ExceptionType).Trim() -like ([String]$Item.CommandType).Trim() ) {
+							Write-Verbose "Comparing `"$(([String]$Exc.Module).Trim())`" and `"$(([String]$Item.Source).Trim())`""
+							If ( ([String]$Exc.Module).Trim() -like ([String]$Item.Source).Trim() ) {
+								$Status = $TrueString
+							} Else {
+								$Status = $FalseString
+							}
+						}
+					}
+				}
+				$ExceptionsSelection += [PSCustomObject]@{
+					ID = $i
+					Sel = $Status
+					ExceptionName = $Item.Name
+					ExceptionType = $Item.CommandType
+					Module = $Item.Source
+				}
+			}
+			
+			[int]$CancelSelID = ($i + 1)
+			[int]$DeleteSelID = ($i + 2)
+			[int]$FinishSelID = ($i + 3)
+			
+			# Execute selection menu:
+			Do {
+				$NoSelection = $True
+				ForEach ($Item in $ExceptionsSelection) {
+					If ($Item.Sel -eq $TrueString) {
+						$NoSelection = $False
+					}
+				}
+				
+				$Display = $ExceptionsSelection
+				$Display += [PSCustomObject]@{
+					ID = [int]$CancelSelID
+					Sel = ""
+					ExceptionName = "<cancel edits & exit without saving>"
+					ExceptionType = ""
+					Module = ""
+				}
+				$Display += [PSCustomObject]@{
+					ID = [int]$DeleteSelID
+					Sel = ""
+					ExceptionName = "<delete $ExceptionFileName & remove all exceptions>"
+					ExceptionType = ""
+					Module = ""
+				}
+				If (!($NoSelection)) {
+					$Display += [PSCustomObject]@{
+						ID = [int]$FinishSelID
+						Sel = ""
+						ExceptionName = "<finish/confirm>"
+						ExceptionType = ""
+						Module = ""
+					}
+					[int]$MaxID = [int]$FinishSelID
+				} Else {
+					[int]$MaxID = [int]$DeleteSelID
+				} # End If/Else (!($NoSelection))
+				
+				Write-Host "`nExceptions selection: "
+				
+				$Display | Format-Table | Out-Host
+				
+				[int]$SelID = Read-Host "Selection ID"
+				
+				If (([int]$SelID -ge 1) -And ([int]$SelID -le [int]$MaxID)) {
+					If (([int]$SelID -ge 1) -And ([int]$SelID -le ($ExceptionsSelection.Count))) {
+						ForEach ($MenuItem in $ExceptionsSelection) {
+							If ($MenuItem.ID -eq [int]$SelID) {
+								If ($MenuItem.Sel -eq $TrueString) {
+									$MenuItem.Sel = $FalseString
+								} Else {
+									$MenuItem.Sel = $TrueString
+								}
+							} # End If ($MenuItem.ID -eq [int]$SelID)
+						} # End ForEach ($MenuItem in $ExceptionsSelection)
+					} # End If (([int]$SelID -ge 1) -And ([int]$SelID -le ($ExceptionsSelection.Count)))
+				} Else {
+					Write-Host "SELECTION ERROR: 1-$([int]$MaxID)" -ForegroundColor Red -BackgroundColor Black
+				} # End If/Else (([int]$SelID -ge 1) -And ([int]$SelID -le [int]$MaxID))
+				
+			} Until ( [int]$SelID -eq [int]$CancelSelID -Or [int]$SelID -eq [int]$DeleteSelID -Or (!($NoSelection) -And [int]$SelID -eq [int]$FinishSelID) )
+			
+			If ([int]$SelID -eq [int]$FinishSelID) {
+				$Exceptions = @()
+				ForEach ($SelectedItem in $ExceptionsSelection) {
+					If ($SelectedItem.Sel -eq $TrueString) {
+						$Exceptions += [PSCustomObject]@{
+							ExceptionName = $SelectedItem.ExceptionName
+							ExceptionType = $SelectedItem.ExceptionType
+							Module = $SelectedItem.Module
+						}
+					}
+				}
+				Write-Verbose "Saving changes to Exceptions list: $ExceptionFileName"
+				$Exceptions | Export-Clixml -Path $ExceptionFile
+			} ElseIf ([int]$SelID -eq [int]$DeleteSelID) {
+				Write-Verbose "Deleting Exceptions file: $ExceptionFileName"
+				Remove-Item -Path $ExceptionFile
+				Remove-Variable -Name "Exceptions"
+			} ElseIf ([int]$SelID -eq [int]$CancelSelID) {
+				Write-Verbose "Cancelled editing Exceptions file and all changes discarded."
+			}
 		}
 		2 {
 			Write-Verbose "Skipping $ExceptionFileName"
@@ -168,34 +309,114 @@ If ((Test-Path -Path $ExceptionFile)) {
 	
 	Write-Verbose "No Exceptions file found."
 	
-	[String[]]$FileNames = $(@("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1"))
-	$HomePath = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
-	
-	ForEach ($file in $FileNames) {
-		#$file = "ManageEnvVars.ps1"
-		#$file = "ManageEnvVars_Admin.ps1"
-		
-		$FullPath = Join-Path -Path $HomePath -ChildPath $file
-		$ModuleInfo = Get-ModuleCommandInfo -Path $FullPath -NoVerification -NoSubFunctions @CommonParameters
-		$FunctionsList = Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo @CommonParameters
-		$AliasList = Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo @CommonParameters
-		Write-Host "$($file):"
-		$ModuleInfo | Format-Table | Out-Host
-	}
-	
 	# Ask user to create exceptions file
-	$Title = "Create $ExceptionFileName?"
-	$Info = "An exceptions file is defined in parameters, but was not found. Create it?"
+	$Title = "Create `"$ExceptionFileName`"?"
+	$Info = "An exceptions file is defined in parameters, but the file was not found. Create it?"
 	# Use Ampersand & in front of letter to designate that as the choice key. E.g. "&Yes" for Y, "Y&Ellow" for E.
 	$Yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", "Create & build the file: `"$ExceptionFile`""
-	$No = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Skip defining any exceptions and automatically load all functions and aliases in: $FileNames"
+	$No = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Skip defining any exceptions and automatically load all functions and aliases in file(s): $FileNames"
 	$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Yes, $No)
 	[int]$DefaultChoice = 0
 	$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
 	switch ($Result) {
 		0 {
 			Write-Verbose "Creating Exceptions file"
-			$Exceptions = Get-Content -Path $ExceptionFile
+			
+			# Build menu list:
+			$Exceptions = @()
+			$ExceptionsSelection = @()
+			$i = 0
+			ForEach ($Item in $CompleteModulesInfo) {
+				$i++
+				$ExceptionsSelection += [PSCustomObject]@{
+					ID = $i
+					Sel = $FalseString
+					ExceptionName = $Item.Name
+					ExceptionType = $Item.CommandType
+					Module = $Item.Source
+				}
+			}
+			
+			[int]$CancelSelID = ($i + 1)
+			[int]$FinishSelID = ($i + 2)
+			
+			# Execute selection menu:
+			Do {
+				$NoSelection = $True
+				ForEach ($Item in $ExceptionsSelection) {
+					If ($Item.Sel -eq $TrueString) {
+						$NoSelection = $False
+					}
+				}
+				
+				$Display = $ExceptionsSelection
+				$Display += [PSCustomObject]@{
+					ID = [int]$CancelSelID
+					Sel = ""
+					ExceptionName = "<cancel>"
+					ExceptionType = ""
+					Module = ""
+				}
+				If (!($NoSelection)) {
+					$Display += [PSCustomObject]@{
+						ID = [int]$FinishSelID
+						Sel = ""
+						ExceptionName = "<finish/confirm>"
+						ExceptionType = ""
+						Module = ""
+					}
+					[int]$MaxID = [int]$FinishSelID
+				} Else {
+					[int]$MaxID = [int]$CancelSelID
+				} # End If/Else (!($NoSelection))
+				
+				Write-Host "`nExceptions selection: "
+				#Write-Host "(marked items will be added to exceptions list)"
+				
+				$Display | Format-Table | Out-Host
+				
+				[int]$SelID = Read-Host "Selection ID"
+				
+				If (([int]$SelID -ge 1) -And ([int]$SelID -le [int]$MaxID)) {
+					If (([int]$SelID -ge 1) -And ([int]$SelID -le ($ExceptionsSelection.Count))) {
+						ForEach ($MenuItem in $ExceptionsSelection) {
+							If ($MenuItem.ID -eq [int]$SelID) {
+								If ($MenuItem.Sel -eq $TrueString) {
+									$MenuItem.Sel = $FalseString
+								} Else {
+									$MenuItem.Sel = $TrueString
+								}
+							} # End If ($MenuItem.ID -eq [int]$SelID)
+						} # End ForEach ($MenuItem in $ExceptionsSelection)
+					} # End If (([int]$SelID -ge 1) -And ([int]$SelID -le ($ExceptionsSelection.Count)))
+				} Else {
+					Write-Host "SELECTION ERROR: 1-$([int]$MaxID)" -ForegroundColor Red -BackgroundColor Black
+				} # End If/Else (([int]$SelID -ge 1) -And ([int]$SelID -le [int]$MaxID))
+				
+			} Until ( ($NoSelection -And [int]$SelID -eq [int]$CancelSelID) -Or (!($NoSelection) -And (([int]$SelID -eq [int]$CancelSelID) -Or ([int]$SelID -eq [int]$FinishSelID))) )
+			
+			If ([int]$SelID -eq [int]$FinishSelID) {
+				$Exceptions = @()
+				ForEach ($SelectedItem in $ExceptionsSelection) {
+					If ($SelectedItem.Sel -eq $TrueString) {
+						$Exceptions += [PSCustomObject]@{
+							ExceptionName = $SelectedItem.ExceptionName
+							ExceptionType = $SelectedItem.ExceptionType
+							Module = $SelectedItem.Module
+						}
+					}
+				}
+				
+				#$Results = New-Item -Path $ExceptionFile -ItemType File
+				#Write-Verbose $Results
+				#Set-Content -Path $ExceptionFile -Value $Exceptions
+				
+				$Exceptions | Export-Clixml -Path $ExceptionFile
+				
+				Write-Verbose "Finished creating Exceptions file: $ExceptionFileName"
+			} ElseIf ([int]$SelID -eq [int]$CancelSelID) {
+				Write-Verbose "Cancelled Exceptions file creation: $ExceptionFileName"
+			}
 		}
 		1 {
 			Write-Verbose "Skipping exceptions, $ExceptionFileName will not be created."
@@ -203,6 +424,10 @@ If ((Test-Path -Path $ExceptionFile)) {
 	} # End switch ($Result)
 	
 } # End If/Else ((Test-Path -Path $ExceptionFile))
+
+
+Pause
+
 
 #-----------------------------------------------------------------------------------------------------------------------
 
