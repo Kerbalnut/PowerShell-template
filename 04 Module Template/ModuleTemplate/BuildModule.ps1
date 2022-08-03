@@ -17,36 +17,47 @@ Function Get-FunctionName {
 Function Get-ModuleCommandInfo {
 	<#
 	.SYNOPSIS
-	Returns all commands and aliases from a given PowerShell script file.
+	Returns all function names and aliases from a given PowerShell script file.
 	.DESCRIPTION
-	Returns Get-Command results, but for any PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code. (It compiles/Can be loaded without any terminating errors.) Use the -NoVerification switch to turn this behavior off.
-	.NOTES
+	Relies on Get-Command results, but for any type of PowerShell file. Uses Import-Module to load the file into memory, so the file must be valid PowerShell code. (It compiles/Can be loaded without any terminating errors.) Use the -NoVerification switch to turn this behavior off and exclusivly use a regex discovery method.
 	.PARAMETER TempFileSuffix
 	This function creates a temporary .psm1 module file to load from with a custom suffix name, in order to avoid any conflicts with the originally named module if it's already imported.
 	Use this parameter to adjust the suffix string.
 	By default, this value is usually set as either "_GetFunctions" or "_GetAliases".
 	For example, the file "HelloWorld.ps1" would become the temporary filename "HelloWorld_GetFunctions.psm1" for operation.
+	
+	If -NoVerification switch is used this parameter becomes unnecessary.
 	.PARAMETER NoVerification
 	Turns off validation of PowerShell code before returning results. This method will rely exclusively on regex filters for function name discovery.
+	
+	Not compatible with -RawOutput switch.
 	.PARAMETER IncludeSubFunctions
 	Includes discovery of sub-functions nested inside other functions.
 	.PARAMETER NoSubFunctions
 	Excludes sub-functions nested inside other functions.
 	.PARAMETER RawOutput
 	Prevents simplifying of output object type. Normally Get-Command output creates a [System.Management.Automation.FunctionInfo] array with [System.Management.Automation.AliasInfo] and [System.Management.Automation.FunctionInfo] objects. This switch will also prevent sub-functions nested inside other functions from being discovered.
+	
+	Not compatible with -NoVerification switch.
+	.NOTES
+	
 	.EXAMPLE
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1" -Verbose
 	
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1"
 	
-	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1" -Verbose
+	Get-ModuleCommandInfo -Path $Path -Verbose
 	.EXAMPLE
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoVerification -Verbose
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -IncludeSubFunctions -Verbose
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoSubFunctions -Verbose
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -RawOutput -Verbose
+	
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1" -NoVerification -NoSubFunctions -Verbose
 	#>
-	[CmdletBinding(DefaultParameterSetName = "")]
+	[CmdletBinding(DefaultParameterSetName = "NoSubFuncs")]
 	Param(
 		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
@@ -56,14 +67,26 @@ Function Get-ModuleCommandInfo {
 		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
 		[String]$Path,
 		
+		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(ParameterSetName = "NoSubFuncs")]
 		[String]$TempFileSuffix = "_GetFunctions",
 		
-		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(ParameterSetName = "NoSubFuncs_NoVerification")]
 		[Switch]$NoVerification,
+		
+		[Parameter(ParameterSetName = "IncludeSubFuncs_NoVerification")]
 		[Parameter(ParameterSetName = "IncludeSubFuncs")]
 		[Switch]$IncludeSubFunctions,
+		
+		[Parameter(ParameterSetName = "NoSubFuncs_NoVerification")]
 		[Parameter(ParameterSetName = "NoSubFuncs")]
 		[Switch]$NoSubFunctions,
+		
+		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Switch]$DontRemoveModule,
+		
 		[Parameter(ParameterSetName = "NoSubFuncs")]
 		[Switch]$RawOutput
 	)
@@ -163,9 +186,11 @@ Function Get-ModuleCommandInfo {
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
-	$DefaultBehavior = ""
-	
+	# Set default behavior:
 	If ($IncludeSubFunctions -And $NoSubFunctions) {
+		$IncludeSubFunctions = $False
+		$NoSubFunctions = $True
+	} ElseIf (!($IncludeSubFunctions) -And !($NoSubFunctions)) {
 		$IncludeSubFunctions = $False
 		$NoSubFunctions = $True
 	}
@@ -179,6 +204,8 @@ Function Get-ModuleCommandInfo {
 	
 	If (!($NoVerification)) {
 		
+		Write-Verbose "Getting functions & aliases via Import-Module: ($TempModuleName)"
+		
 		If ((Test-Path -Path $NewPath)) {
 			Write-Warning "Temp module path already exists. Deleting: $TempModuleName.psm1"
 			Remove-Item -Path $NewPath -Force @CommonParameters
@@ -187,21 +214,34 @@ Function Get-ModuleCommandInfo {
 		Copy-Item -Path $Path -Destination $NewPath @CommonParameters
 		Start-Sleep -Milliseconds 60
 		
+		ForEach ($Module in ((Get-Module).Name)) {
+			If ($Module -eq $TempModuleName) {
+				Try {
+					Remove-Module -Name $TempModuleName @CommonParameters
+				} Catch {
+					Write-Warning "Module ($TempModuleName) removal failure."
+				}
+			} # End If ($Module -eq $TempModuleName)
+		} # End ForEach ($Module in ((Get-Module).Name))
+		Start-Sleep -Milliseconds 60
+		
 		Import-Module $NewPath @CommonParameters
 		Start-Sleep -Milliseconds 60
 		
 		$ModuleInfo = Get-Command -Module $TempModuleName @CommonParameters
 		Start-Sleep -Milliseconds 60
 		
-		ForEach ($Module in ((Get-Module).Name)) {
-			If ($Module -eq $TempModuleName) {
-				Try {
-					Remove-Module -Name $TempModuleName @CommonParameters
-				} Catch {
-					Write-Warning "No modules ($TempModuleName) were removed."
-				}
-			}
-		}
+		If (!($DontRemoveModule)) {
+			ForEach ($Module in ((Get-Module).Name)) {
+				If ($Module -eq $TempModuleName) {
+					Try {
+						Remove-Module -Name $TempModuleName @CommonParameters
+					} Catch {
+						Write-Warning "No modules ($TempModuleName) were removed."
+					}
+				} # End If ($Module -eq $TempModuleName)
+			} # End ForEach ($Module in ((Get-Module).Name))
+		} # End If (!($DontRemoveModule))
 		
 		If ((Test-Path -Path $NewPath)) {
 			Remove-Item -Path $NewPath -Force @CommonParameters
@@ -218,11 +258,13 @@ Function Get-ModuleCommandInfo {
 	
 	# Get sub-functions via regex:
 	
-	If (!($NoSubFunctions) -And !($RawOutput)) {
+	If (!($RawOutput)) {
+		
+		Write-Verbose "Getting functions & sub-functions via regex:"
 		
 		#Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
 		
-		$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+		#$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 		
 		$FileText = (Get-Content -Path $Path | Out-String).Trim()
 		
@@ -237,14 +279,18 @@ Function Get-ModuleCommandInfo {
 		
 		If ((Test-Path -Path $TempFile)) {Remove-Item -Path $TempFile -Force}
 		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
+		
 		$CmdletResults = New-Item -Path $TempFile -ItemType File -Value $NoMultiLineComments
 		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
+		Write-Verbose $CmdletResults
+		#If ($VerbosePreference -ne "SilentlyContinue") {Write-Host $CmdletResults}
+		
 		Set-Content -Path $TempFile -Value $NoMultiLineComments
 		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
-		If ($VerbosePreference -ne "SilentlyContinue") {Write-Host $CmdletResults}
 		
 		$FileText = Get-Content -Path $TempFile
 		Start-Sleep -Milliseconds 100 # Wait for disk operations to complete
+		
 		If ((Test-Path -Path $TempFile)) {Remove-Item -Path $TempFile -Force}
 		
 		$NoSingleLineComments = $FileText -replace '\s*#.*',''
@@ -260,8 +306,15 @@ Function Get-ModuleCommandInfo {
 		
 		$FullFunctionsList = $FullFunctionsList -replace '{',''
 		$FullFunctionsList = $FullFunctionsList -replace '}',''
+		
+		If ($NoVerification) {
+			$TopLvlFunctions = $FullFunctionsList -replace '(?i)^function\s+',''
+			$TopLvlFunctions = $TopLvlFunctions -replace '\s+',''
+		}
+		
 		$FullFunctionsList = $FullFunctionsList -replace '(?i)\s*function\s+',''
 		$FullFunctionsList = $FullFunctionsList -replace '\s+',''
+		
 	} # End If (!($NoSubFunctions) -And !($RawOutput))
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -269,16 +322,43 @@ Function Get-ModuleCommandInfo {
 	# Convert module info data into a generic array that's easier to manipulate:
 	
 	$SimpleInfo = @()
-	ForEach ($Item in $ModuleInfo) {
-		$SimpleInfo += [PSCustomObject]@{
-			CommandType = $Item.CommandType
-			Name = $Item.Name
-			Version = $Item.Version
-			Source = $Item.Source
-		}
-	}
+	If (!($NoVerification)) {
+		ForEach ($Item in $ModuleInfo) {
+			$SimpleInfo += [PSCustomObject]@{
+				CommandType = $Item.CommandType
+				Name = $Item.Name
+				Version = $Item.Version
+				Source = $Item.Source
+			}
+		} # End ForEach ($Item in $ModuleInfo)
+	} Else {
+		ForEach ($RegexFunction in $FullFunctionsList) {
+			$CT = "Sub-function"
+			ForEach ($TopLvlFunc in $TopLvlFunctions) {
+				#Write-Verbose "Comparing `"$RegexFunction`" to `"$TopLvlFunc`""
+				If ($TopLvlFunc -eq $RegexFunction) {
+					$CT = "Function"
+				}
+			}
+			
+			$NewItem = [PSCustomObject]@{
+				CommandType = $CT
+				Name = $RegexFunction
+				Version = $null
+				Source = $TempModuleName
+			}
+			
+			If ($NoSubFunctions) {
+				If ($CT -eq "Function") {
+					$SimpleInfo += $NewItem
+				}
+			} Else {
+				$SimpleInfo += $NewItem
+			}
+		} # End ForEach ($RegexFunction in $FullFunctionsList)
+	} # End If/Else ($NoVerification)
 	
-	If ($NoSubFunctions) {
+	If ($NoSubFunctions -Or $NoVerification) {
 		Return $SimpleInfo
 	}
 	
@@ -336,7 +416,6 @@ Function Get-FunctionsInScript {
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1"
 	#>
-	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
 	[CmdletBinding(DefaultParameterSetName = 'Path')]
 	Param(
@@ -423,7 +502,6 @@ Function Get-AliasesInScript {
 	$ModuleInfo = Get-ModuleCommandInfo -Path $Path -Verbose
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	#>
-	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
 	[CmdletBinding(DefaultParameterSetName = 'Path')]
 	Param(
@@ -486,7 +564,6 @@ Function Get-AliasesInScript {
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return $FunctionAliases
 } # End of Get-AliasesInScript function.
-Set-Alias -Name 'New-ProjectInitTEST' -Value 'Get-AliasesInScript'
 #-----------------------------------------------------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -501,7 +578,6 @@ Function New-Shortcut {
 	
 	Maybe some original author credits as well.
 	#>
-	[Alias("New-ProjectInitTEST")]
 	#Requires -Version 3
 	#[CmdletBinding()]
 	[CmdletBinding(DefaultParameterSetName = 'None')]
@@ -536,7 +612,6 @@ Function New-Shortcut {
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return
 } # End of New-Shortcut function.
-Set-Alias -Name 'New-ProjectInitTEST' -Value 'New-Shortcut'
 #-----------------------------------------------------------------------------------------------------------------------
 
 

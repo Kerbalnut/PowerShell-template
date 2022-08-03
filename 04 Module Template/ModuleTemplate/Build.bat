@@ -17,7 +17,7 @@ REM ECHO DEBUGGING: Begin RunAsAdministrator block.
 :-------------------------------------------------------------------------------
 :: First check if we are already running As Admin/Elevated
 FSUTIL dirty query %SystemDrive% >nul
-IF %ERRORLEVEL% EQU 0 SET "_ADMIN=TRUE" & GOTO SKIPADMIN
+IF %ERRORLEVEL% EQU 0 SET "_ADMIN=TRUE" & GOTO START
 
 :: Check input parameters
 REM ECHO DEBUGGING: Parameter %%1: "%1"
@@ -25,7 +25,7 @@ IF "%1"=="RunAsAdmin" GOTO RUNASADMIN
 IF "%1"=="NoAdmin" GOTO SKIPADMIN
 
 ::GOTO SKIPADMIN & REM <-- Leave this line in to always skip Elevation Prompt -->
-::GOTO RUNASADMIN & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
+GOTO RUNASADMIN & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
 :: Comment out both GOTO statements to prompt user to elevate.
 ECHO:
 ECHO CHOICE Loading...
@@ -151,14 +151,14 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 :: Param7 = Skip Help commands
 
 SET "_SHOW_HELP=No"
-SET "_SHOW_HELP=Yes"
+::SET "_SHOW_HELP=Yes"
 
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 :: Param8 = Example Help Command
 
 SET "_SHOW_EXAMPLE_HELP=No"
-SET "_SHOW_EXAMPLE_HELP=Yes"
+::SET "_SHOW_EXAMPLE_HELP=Yes"
 
 SET "_EXAMPLE_HELP_COMMAND=Get-ChildItem"
 
@@ -173,7 +173,7 @@ REM ============================================================================
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 :Main
 
-ECHO DEBUGGING: Beginning Main execution block.
+REM ECHO DEBUGGING: Beginning Main execution block.
 
 ::Index of Main:
 
@@ -239,7 +239,7 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 :ExampleHelp
 :: Skip Example Help lookup
 IF /I "%_SHOW_EXAMPLE_HELP%"=="No" (
-	ECHO DEBUGGING: Skipping %_EXAMPLE_HELP_COMMAND% example help command 
+	REM ECHO DEBUGGING: Skipping %_EXAMPLE_HELP_COMMAND% example help command 
 	GOTO ScriptHelp & REM Comment out this line to display help before loading script
 )
 ECHO -------------------------------------------------------------------------------
@@ -262,7 +262,7 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 :ScriptHelp
 :: Skip Help lookup
 IF /I "%_SHOW_HELP%"=="No" (
-	ECHO DEBUGGING: Skipping %_PowerShellFile_NAME% help command 
+	REM ECHO DEBUGGING: Skipping %_PowerShellFile_NAME% help command 
 	GOTO MainMenu & REM Comment out this line to display help before loading script
 )
 ECHO -------------------------------------------------------------------------------
@@ -301,7 +301,7 @@ CALL :GetWindowsVersion
 ECHO:
 
 :ChooseAdminOptions
-ECHO DEBUGGING: "%%_ADMIN_OPTION%%" = "%_ADMIN_OPTION%"
+REM ECHO DEBUGGING: "%%_ADMIN_OPTION%%" = "%_ADMIN_OPTION%"
 IF /I "%_ADMIN_OPTION%"=="RunNonElevated" GOTO ChooseRunOptions
 IF /I "%_ADMIN_OPTION%"=="RunAsAdministrator" GOTO ChooseRunOptions
 CALL :GetIfAdmin NoEcho
@@ -388,7 +388,7 @@ CALL :GetIfAdmin
 IF %_WindowsVersion% EQU 10 (
 	REM Windows 10 has PowerShell width CMD.exe windows.
 	IF /I "%_ADMIN_OPTION%"=="RunNonElevated" (
-		PowerShell.exe %_NO_PROFILE% -ExecutionPolicy %_ExecutionPolicy% -File "%_PowerShellFile%" %_POSH_PARAMS%
+		PowerShell.exe %_NO_PROFILE% -ExecutionPolicy %_ExecutionPolicy% -File "%_PowerShellFile%" -Verbose %_POSH_PARAMS%
 	)
 	IF /I "%_ADMIN_OPTION%"=="RunAsAdministrator" (
 		REM PowerShell.exe -NoProfile -Command "& {Start-Process PowerShell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File ""%_PowerShellFile%""' -Verbose -Verb RunAs}"
@@ -533,7 +533,7 @@ EXIT /B & REM If you call this program from the command line and want it to retu
 
 REM -------------------------------------------------------------------------------
 
-ECHO DEBUGGING: Begin DefineFunctions block.
+REM ECHO DEBUGGING: Begin DefineFunctions block.
 
 :DefineFunctions
 :: Declare Functions

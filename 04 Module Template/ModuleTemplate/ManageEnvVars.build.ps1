@@ -2,7 +2,7 @@
 .SYNOPSIS
 Controller script for building ManageEnvVars (and ManageEnvVars_Admin) modules.
 .DESCRIPTION
-#Requires -RunAsAdministrator because Get-ModuleCommandInfo function needs to load all files as modules to work, and this project contains modules that are Admin only.
+Requires -RunAsAdministrator because Get-ModuleCommandInfo function needs to load all files as modules to work, and this project contains modules that are Admin only.
 .PARAMETER FileNames
 List of module files to export for the module. These can be .ps1 files and they will still be exported as .psm1 files.
 .PARAMETER BuildFuncsName
@@ -26,14 +26,15 @@ Cmdlets vs. Functions:
 #Requires -RunAsAdministrator
 [CmdletBinding()]
 Param(
-	[Parameter(Mandatory = $True, Position = 0, 
+	[Parameter(Position = 0, 
+	#Mandatory = $True, 
 	ValueFromPipeline = $True, 
 	ValueFromPipelineByPropertyName = $True)]
 	[ValidateNotNullOrEmpty()]
 	[Alias('ModuleNames','FilesToExport')]
-	[String[]]$FileNames = @("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1"),
+	[String[]]$FileNames = $(@("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1")),
 	
-	[Parameter(Mandatory = $True)]
+	#[Parameter(Mandatory = $True)]
 	[String]$BuildFuncsName = "BuildModule.ps1",
 	
 	[Parameter(Mandatory = $False)]
@@ -75,31 +76,38 @@ $CommonParameters = @{
 	Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 }
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 $ScriptName = $MyInvocation.MyCommand.Name
 Write-Host "Starting build script: `"$ScriptName`""
 $HomePath = $PSScriptRoot
-#$HomePath = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
+#$HomePath = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
+Write-Verbose "Selected files: $FileNames"
 
-Pause
+#-----------------------------------------------------------------------------------------------------------------------
 
 # Import build functions from BuildModule.ps1
 If ($BuildFuncsName -match '.+\..+') {$HasFileExtension = $True} Else {$HasFileExtension = $False}
-
+# RegEx: .+\..+
+#    .+  The . matches any character, plus + modifier matches between one and unlimited times (Greedy)
+#    \.  Matches the period . character literally. (Backslash \ is the escape character)
+#    .+  The . matches any character, plus + modifier matches between one and unlimited times (Greedy)
 
 If ($HasFileExtension) {
-	
 	$Method = 0
 	switch ($Method) {
 		0 {
+			# .NET function
 			$FileExtension = [System.IO.Path]::GetExtension($Path)
 			
 			# Regex remove any . in $FileExtension
 			$FileExtension = $FileExtension -replace '^\.',''
 		}
 		1 {
+			# Split-Path
 			$FileExtension = ((Split-Path -Path $Path -Leaf).Split('.'))[1]
 		}
 		2 {
+			# Get-ChildItemS
 			$FileExtension = (Get-ChildItem -Path $Path).Extension
 			
 			# Regex remove any . in $FileExtension
@@ -107,8 +115,7 @@ If ($HasFileExtension) {
 		}
 		Default {Throw "Horrible error: Get file extension wrong `$Method: '$Method'"}
 	} # End switch
-	
-}
+} # End If ($HasFileExtension)
 $BuildFunctions = Join-Path -Path $HomePath -ChildPath $BuildFuncsName
 If ((Test-Path -Path $BuildFunctions)) {
 	Write-Verbose "Loading $BuildFuncsName . . . `"$BuildFunctions`""
@@ -122,9 +129,13 @@ If ((Test-Path -Path $BuildFunctions)) {
 	Write-Error "'$BuildFuncsName' script with additional (required) build functions could not be found: `"$BuildFunctions`""
 	Throw "'$BuildFuncsName' script with additional (required) build functions could not be found: `"$BuildFunctions`""
 }
+Write-Verbose "Loading $BuildFuncsName complete."
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 #$ExceptionFileName = "Exceptions.xml"
 $ExceptionFile = Join-Path -Path $HomePath -ChildPath $ExceptionFileName
+If ($Exceptions) {Remove-Variable -Name Exceptions}
 
 If ((Test-Path -Path $ExceptionFile)) {
 	
@@ -135,7 +146,6 @@ If ((Test-Path -Path $ExceptionFile)) {
 	$Load = New-Object System.Management.Automation.Host.ChoiceDescription "&Load", "Load all exception in $ExceptionFileName file"
 	$Modify = New-Object System.Management.Automation.Host.ChoiceDescription "&Edit", "Modify $ExceptionFileName file"
 	$Skip = New-Object System.Management.Automation.Host.ChoiceDescription "&Skip", "Skip loading the exceptions file, include all functions with no exceptions."
-	#$Options = [System.Management.Automation.Host.ChoiceDescription[]] @("&Power", "&Shell", "&Quit")
 	$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Load, $Modify, $Skip)
 	[int]$DefaultChoice = 0
 	$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
@@ -151,7 +161,6 @@ If ((Test-Path -Path $ExceptionFile)) {
 		}
 		2 {
 			Write-Verbose "Skipping $ExceptionFileName"
-			
 		}
 	} # End switch ($Result)
 	
@@ -159,7 +168,43 @@ If ((Test-Path -Path $ExceptionFile)) {
 	
 	Write-Verbose "No Exceptions file found."
 	
+	[String[]]$FileNames = $(@("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1"))
+	$HomePath = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\"
+	
+	ForEach ($file in $FileNames) {
+		#$file = "ManageEnvVars.ps1"
+		#$file = "ManageEnvVars_Admin.ps1"
+		
+		$FullPath = Join-Path -Path $HomePath -ChildPath $file
+		$ModuleInfo = Get-ModuleCommandInfo -Path $FullPath -NoVerification -NoSubFunctions @CommonParameters
+		$FunctionsList = Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo @CommonParameters
+		$AliasList = Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo @CommonParameters
+		Write-Host "$($file):"
+		$ModuleInfo | Format-Table | Out-Host
+	}
+	
+	# Ask user to create exceptions file
+	$Title = "Create $ExceptionFileName?"
+	$Info = "An exceptions file is defined in parameters, but was not found. Create it?"
+	# Use Ampersand & in front of letter to designate that as the choice key. E.g. "&Yes" for Y, "Y&Ellow" for E.
+	$Yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", "Create & build the file: `"$ExceptionFile`""
+	$No = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Skip defining any exceptions and automatically load all functions and aliases in: $FileNames"
+	$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Yes, $No)
+	[int]$DefaultChoice = 0
+	$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
+	switch ($Result) {
+		0 {
+			Write-Verbose "Creating Exceptions file"
+			$Exceptions = Get-Content -Path $ExceptionFile
+		}
+		1 {
+			Write-Verbose "Skipping exceptions, $ExceptionFileName will not be created."
+		}
+	} # End switch ($Result)
+	
 } # End If/Else ((Test-Path -Path $ExceptionFile))
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 $FuncParams = @()
 $FuncParams += [PSCustomObject]@{
@@ -174,13 +219,14 @@ $FuncParams += [PSCustomObject]@{
 	ExceptionName = "New-ProjectInitTEST"
 }
 
+#-----------------------------------------------------------------------------------------------------------------------
 
-[String[]]$FileNames = @("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1")
+#[String[]]$FileNames = @("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1")
 
 ForEach ($file in $FileNames) {
-	$file = "ManageEnvVars.ps1"
+	#$file = "ManageEnvVars.ps1"
 	$FullPath = Join-Path -Path $HomePath -ChildPath $file
-	$FullPath = "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
+	#$FullPath = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	$ModuleInfo = Get-ModuleCommandInfo -Path $FullPath
 	$FunctionsList = Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo
 	$AliasList = Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo
@@ -232,7 +278,7 @@ ForEach ($file in $FileNames) {
 			Name = "<done/cancel>"
 		}
 		$SelectionArray | Format-Table
-		$SelectedID = Read-Host -Prompt "Select ID:"
+		$SelectedID = Read-Host -Prompt "Select ID"
 		
 	} Until ($SelectedID -ge 1 -And $SelectedID -le ($FunctionsList.Count + 1) )
 	
@@ -242,16 +288,11 @@ Write-Verbose "Building variables hash table:"
 $Method = 0
 switch ($Method) {
 	0 {
-		$FuncParams = @{
-			TempFileSuffix = $TempFileSuffix
-		}
+		$FuncParams = @{TempFileSuffix = $TempFileSuffix}
 	}
 	1 {
 		$FuncParams = @{}
-		
-		If ($TempFileSuffix) {
-			$FuncParams += @{Test2 = $TempFileSuffix}
-		}
+		If ($TempFileSuffix) {$FuncParams += @{TempFileSuffix = $TempFileSuffix}}
 	}
 	Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}
 } # End switch
@@ -352,7 +393,7 @@ New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module T
 
 New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut"
 
-New-ModuleManifest -Path "C:\Users\Grant\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars\0.1\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
+New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars\0.1\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
 
 
 
