@@ -191,18 +191,10 @@ If ((Test-Path -Path $ExceptionFile)) {
 			$i = 0
 			ForEach ($Item in $CompleteModulesInfo) {
 				$i++
+				$Status = $FalseString
 				ForEach ($Exc in $Exceptions) {
-					Write-Verbose "Comparing `"$(([String]$Exc.ExceptionName).Trim())`" and `"$(([String]$Item.Name).Trim())`""
-					If ( ([String]$Exc.ExceptionName).Trim() -like ([String]$Item.Name).Trim() ) {
-						Write-Verbose "Comparing `"$(([String]$Exc.ExceptionType).Trim())`" and `"$(([String]$Item.CommandType).Trim())`""
-						If ( ([String]$Exc.ExceptionType).Trim() -like ([String]$Item.CommandType).Trim() ) {
-							Write-Verbose "Comparing `"$(([String]$Exc.Module).Trim())`" and `"$(([String]$Item.Source).Trim())`""
-							If ( ([String]$Exc.Module).Trim() -like ([String]$Item.Source).Trim() ) {
-								$Status = $TrueString
-							} Else {
-								$Status = $FalseString
-							}
-						}
+					If ( $Exc.ExceptionName -eq $Item.Name -And $Exc.ExceptionType -eq $Item.CommandType -And $Exc.Module -eq $Item.Source ) {
+						$Status = $TrueString
 					}
 				}
 				$ExceptionsSelection += [PSCustomObject]@{
