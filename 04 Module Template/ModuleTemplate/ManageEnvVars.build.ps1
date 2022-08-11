@@ -48,7 +48,7 @@ Param(
 	
 	[Parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, 
 	HelpMessage = "Describes the contents of the module.")]
-	$Description = "",
+	$Description = "Hello World",
 	
 	[Parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True)]
 	$ReleaseNotes,
@@ -61,13 +61,17 @@ Param(
 	
 	[System.Object[]]$RequiredModules,
 	[System.String[]]$RequiredAssemblies,
-	[System.Version]$PowerShellVersion,
+	
+	[Parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, 
+	HelpMessage = "Recommended PowerShell version, e.g. '5.1'")]
+	[System.Version]$PowerShellVersion = 5.1,
 	
 	[ValidateSet('Desktop','Core')]
 	[String[]]$CompatiblePSEditions = 'Desktop',
 	
 	[ValidateSet('None','MSIL','X86','IA64','Amd64','Arm')]
-	[String[]]$ProcessorArchitecture = @('None','X86','IA64','Amd64')
+	#@('None','X86','IA64','Amd64')
+	[System.Reflection.ProcessorArchitecture]$ProcessorArchitecture = 'X86'
 	
 )
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -137,16 +141,13 @@ Write-Verbose "Removing extensions from module file names:"
 
 $NoFileExtensions = @()
 ForEach ($File in $FileNames) {
-	If ($File -match '.+\..+') {
-		$HasFileExtension = $True
-	} Else {
-		$HasFileExtension = $False
-		$NoFileExtension = $File
-	}
+	If ($File -match '.+\..+') {$HasFileExtension = $True} Else {$HasFileExtension = $False}
 	# RegEx: .+\..+
 	#    .+    The . matches any character, plus + modifier matches between one and unlimited times (Greedy)
 	#    \.    Matches the period . character literally. (Backslash \ is the escape character)
 	#    .+    The . matches any character, plus + modifier matches between one and unlimited times (Greedy)
+	
+	Write-Verbose "File $File has extension: $HasFileExtension"
 	
 	If ($HasFileExtension) {
 		$Method = 0
@@ -165,8 +166,14 @@ ForEach ($File in $FileNames) {
 			}
 			Default {Throw "Horrible error: Remove file extension wrong `$Method: '$Method'"}
 		} # End switch
+	} Else {
+		$NoFileExtension = $File
 	} # End If ($HasFileExtension)
 	
+	$NoFileExtension = [PSCustomObject]@{
+		File = $File
+		NoFileExtension = $NoFileExtension
+	}
 	$NoFileExtensions += $NoFileExtension
 	
 } # End ForEach ($File in $FileNames)
@@ -493,27 +500,181 @@ If ($Exceptions) {
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-Write-Verbose "Running New-ModuleManifest"
+<#
+-ModuleList 
+Lists all modules that are included in this module.
 
-ForEach ($Module in $CompleteModulesInfo) {
+Enter each module name as a string or as a hash table with ModuleName and ModuleVersion keys. The hash table can also have an optional GUID key. You can combine strings and hash tables in the parameter value.
+
+This key is designed to act as a module inventory. The modules that are listed in the value of this key arent automatically processed.
+
+-FileList
+List of all files packaged with this module. As with ModuleList, FileList is an inventory list, and isn't otherwise processed.
+#>
+$ModuleList = @()
+$FileList = @()
+ForEach ($Name in $NoFileExtensions) {
+	$ModuleList += $Name.NoFileExtension
+	$FileList += $Name.File
+}
+
+$ModulesFolder = Join-Path -Path $HomePath -ChildPath "Modules"
+If ((Test-Path -Path $ModulesFolder)) {
+	Remove-Item -Path $ModulesFolder -Recurse
+}
+$null = New-Item -Path $ModulesFolder -ItemType Directory
+
+ForEach ($Module in $NoFileExtensions) {
+	Write-Verbose "Running New-ModuleManifest for $($Module.NoFileExtension):"
+	
 	# Build Functions & Aliases list:
 	$FunctionsToExport = @()
 	$AliasesToExport = @()
 	ForEach ($ModInfo in $CompleteModulesInfo) {
 		# Let's process one module at a time. In case $CompleteModulesInfo is mixed up somehow.
-		If ($ModInfo.Source -eq $Module.Source) {
-			If ($Module.CommandType -eq 'Function') {
-				$FunctionsToExport += $Module.Name
+		If ($ModInfo.Source -eq $Module.NoFileExtension) {
+			If ($ModInfo.CommandType -eq 'Function') {
+				$FunctionsToExport += $ModInfo.Name
 			}
-			If ($Module.CommandType -eq 'Alias') {
-				$AliasesToExport += $Module.Name
+			If ($ModInfo.CommandType -eq 'Alias') {
+				$AliasesToExport += $ModInfo.Name
 			}
-		} # End If ($ModInfo.Source -eq $Module.Source)
+		} # End If ($ModInfo.Source -eq $Module)
 	} # End ForEach ($ModInfo in $CompleteModulesInfo)
 	# End Build Functions & Aliases list
 	
+	Write-Verbose "Create module $($Module.NoFileExtension) structure and copy files:"
+	
+	$ModNameFolder = Join-Path -Path $ModulesFolder -ChildPath $Module.NoFileExtension
+	$null = New-Item -Path $ModNameFolder -ItemType Directory
+	
+	$VersionFolder = Join-Path -Path $ModNameFolder -ChildPath $ModuleVersion
+	$null = New-Item -Path $VersionFolder -ItemType Directory
+	
+	$NewModName = "$($Module.NoFileExtension).psm1"
+	$NewModPath = Join-Path -Path $VersionFolder -ChildPath $NewModName
+	Copy-Item -Path (Join-Path -Path $HomePath -ChildPath $Module.File) -Destination $NewModPath
+	
+	$NewModManName = "$($Module.NoFileExtension).psd1"
+	$NewModManPath = Join-Path -Path $VersionFolder -ChildPath $NewModManName
 	
 	
+	<#
+	-Guid <System.Guid>
+	To create a new GUID in PowerShell, type `[guid]::NewGuid()`.
+	#>
+	
+	
+	<#
+	-Guid <System.Guid>
+	To create a new GUID in PowerShell, type `[guid]::NewGuid()`.
+	
+	-ReleaseNotes
+	
+	-Description  Describes the contents of the module.
+	
+	-AliasesToExport
+	-Description
+	-ModuleList 
+	Lists all modules that are included in this module.
+	
+	Enter each module name as a string or as a hash table with ModuleName and
+	ModuleVersion keys. The hash table can also have an optional GUID key. You can
+	combine strings and hash tables in the parameter value.
+	
+	This key is designed to act as a module inventory. The modules that are listed in
+	the value of this key arent automatically processed.
+	-CmdletsToExport
+	-FunctionsToExport
+	
+	-Guid
+	-ProjectUri
+	-LicenseUri
+	-IconUri
+	
+	-RequiredModules <System.Object[]>
+	-RequiredAssemblies <System.String[]>
+	
+	-PowerShellVersion <System.Version>
+	-PowerShellHostVersion <System.Version>
+	-CompatiblePSEditions {Desktop | Core}
+	-ProcessorArchitecture {None | MSIL | X86 | IA64 | Amd64 | Arm}
+	#>
+	
+	# Root Module
+	# Script module or binary module file associated with this manifest. Previous versions of PowerShell called this element the ModuleToProcess.
+	# Possible types for the root module can be empty, which creates a Manifest module, the name of a script module (.psm1), or the name of a binary module (.exe or .dll). Placing the name of a module manifest (.psd1) or a script file (.ps1) in this element causes an error.
+	# Example: RootModule = 'ScriptModule.psm1'
+	
+	
+	# ModuleList
+	# Type: Object[]
+	# Specifies all the modules that are packaged with this module. These modules can be entered by name, using a comma-separated string, or as a hash table with ModuleName and GUID keys. The hash table can also have an optional ModuleVersion key. The ModuleList key is designed to act as a module inventory. These modules are not automatically processed.
+	# Example: ModuleList = @("SampleModule", "MyModule", @{ModuleName="MyModule"; ModuleVersion="1.0.0.0"; GUID="50cdb55f-5ab7-489f-9e94-4ec21ff51e59"})
+	
+	# FileList
+	# Type: String[]
+	# List of all files packaged with this module. As with ModuleList, FileList is an inventory list, and isn't otherwise processed.
+	# Example: FileList = @("File1", "File2", "File3")
+	
+	Write-Verbose "Creating $($Module.NoFileExtension) Module manifest (.psd1 file):"
+	
+	#New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars_Admin.psd1" -RootModule 'ManageEnvVars_Admin.psm1' -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
+	
+	#New-ModuleManifest -Path $NewModManPath -RootModule $NewModName -ModuleVersion $ModuleVersion -Author $Author -FunctionsToExport $FunctionsToExport -AliasesToExport $AliasesToExport -ModuleList $ModuleList -Description $Description -ReleaseNotes $ReleaseNotes -Guid $Guid -ProjectUri $ProjectUri -LicenseUri $LicenseUri -IconUri $IconUri -RequiredModules $RequiredModules -RequiredAssemblies $RequiredAssemblies -PowerShellVersion $PowerShellVersion -PowerShellHostVersion $PowerShellHostVersion -CompatiblePSEditions $CompatiblePSEditions -ProcessorArchitecture $ProcessorArchitecture
+	
+	$ParamsHashTable = @{
+		Path = $NewModManPath
+		RootModule = $NewModName
+		ModuleVersion = $ModuleVersion
+		Author = $Author
+		FunctionsToExport = $FunctionsToExport
+		AliasesToExport = $AliasesToExport
+		ModuleList = $ModuleList
+		FileList = $FileList
+		Description = $Description
+		RequiredModules = $RequiredModules
+		RequiredAssemblies = $RequiredAssemblies
+		PowerShellVersion = $PowerShellVersion
+		PowerShellHostVersion = $PowerShellHostVersion
+		CompatiblePSEditions = $CompatiblePSEditions
+		ProcessorArchitecture = $ProcessorArchitecture
+	}
+	If ($ReleaseNotes) {
+		$ParamsHashTable += @{
+			ReleaseNotes = $ReleaseNotes
+		}
+	}
+	If ($Guid) {
+		$ParamsHashTable += @{
+			Guid = $Guid
+		}
+	}
+	If ($ProjectUri) {
+		$ParamsHashTable += @{
+			ProjectUri = $ProjectUri
+		}
+	}
+	If ($LicenseUri) {
+		$ParamsHashTable += @{
+			LicenseUri = $LicenseUri
+		}
+	}
+	If ($IconUri) {
+		$ParamsHashTable += @{
+			IconUri = $IconUri
+		}
+	}
+	
+	New-ModuleManifest @ParamsHashTable
+	
+	
+	#https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7.2
+	
+	#https://docs.microsoft.com/en-us/powershell/module/Microsoft.PowerShell.Core/Test-ModuleManifest
+	
+	
+	#Test-ModuleManifest myModuleName.psd1
 	
 	
 } # End ForEach ($Module in $CompleteModulesInfo)
@@ -565,6 +726,8 @@ the value of this key arent automatically processed.
 
 #>
 
+
+<#
 New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion $ModuleVersion -Author $Author
 
 
@@ -577,7 +740,7 @@ New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module T
 New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars.psd1" -RootModule 'ManageEnvVars.psm1' -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
 
 New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars_Admin.psd1" -RootModule 'ManageEnvVars_Admin.psm1' -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
-
+#>
 
 
 # Root Module
@@ -596,15 +759,6 @@ New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module T
 # List of all files packaged with this module. As with ModuleList, FileList is an inventory list, and isn't otherwise processed.
 # Example: FileList = @("File1", "File2", "File3")
 
-
-
-
-
-#https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7.2
-
-#https://docs.microsoft.com/en-us/powershell/module/Microsoft.PowerShell.Core/Test-ModuleManifest
-
-Test-ModuleManifest myModuleName.psd1
 
 
 #-----------------------------------------------------------------------------------------------------------------------
