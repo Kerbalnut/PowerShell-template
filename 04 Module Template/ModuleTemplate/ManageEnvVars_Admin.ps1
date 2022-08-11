@@ -14,6 +14,8 @@ Function Set-EnvironmentVariable {
 	Sets an environment variable, either PATH or the PowerShell Module paths. Required to be run as Administrator.
 	.DESCRIPTION
 	When given either a PathVar string or ModulePaths string, this function will overwrite either the PATH or PSModulePath environment variable respectively.
+	
+	Whatever the current
 	.PARAMETER BackupFile
 	This function will always attempt to backup the Environment Variable to a file location first before modifying it. 
 	
@@ -243,7 +245,7 @@ Function Set-EnvironmentVariable {
 		#Write-Warning "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
 		If (!($Force)) {
 			Write-Error "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
-			Throw "No ; semicolon detected in new $EnvVarName variable value. This means you will be overwriting $EnvVarName with only one directory location. This is NOT recommened."
+			Throw "No ; semicolon detected in new $EnvVarName variable value. Operation canceled. Use -Force switch to bypass this safety message."
 		}
 	}
 	
@@ -251,17 +253,8 @@ Function Set-EnvironmentVariable {
 		Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName.`n`tOriginal $($EnvVarName): $($OriginalPath.Length) length ; $OriginalPaths count`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length) length ; $EnvVarPaths count`n`t`t- $EnvVarPath"
 		#Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
 		If (!($Force)) {
-			Write-Error "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future,d use the -Remove parameter when removing data from $EnvVarName."
-			Throw "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
-		}
-	}
-	
-	If ( ($EnvVarPath.Length) -lt ($OriginalPath.Length) -And !($Remove) ) {
-		Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName.`n`tOriginal $($EnvVarName): $($OriginalPath.Length) length ; $OriginalPaths count`n`t`t- $OriginalPath`n`tNew $($EnvVarName): $($EnvVarPath.Length) length ; $EnvVarPaths count`n`t`t- $EnvVarPath"
-		#Write-Warning "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
-		If (!($Force)) {
-			Write-Error "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future,d use the -Remove parameter when removing data from $EnvVarName."
-			Throw "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+			Write-Error "New $EnvVarName is shorter than old $EnvVarName! Is this intentional? You will be removing data from the $EnvVarName variable. To avoid this warning in the future, use the -Remove parameter when removing data from $EnvVarName."
+			Throw "New $EnvVarName is shorter than old $EnvVarName! Use -Remove (recommended) or -Force parameters to bypass this message. Operation canceled."
 		}
 	}
 	
@@ -270,7 +263,7 @@ Function Set-EnvironmentVariable {
 		#Write-Warning "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Is this intentional? You will be ADDING data from the $EnvVarName variable.."
 		If (!($Force)) {
 			Write-Error "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Is this intentional? You will be ADDING data from the $EnvVarName variable."
-			Throw "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Is this intentional? You will be ADDING data from the $EnvVarName variable."
+			Throw "New $EnvVarName is longer than old $EnvVarName, and -Remove switch is enabled! Operation canceled. Either delete -Remove switch or add -Force to your command to bypass this safety message."
 		}
 	}
 	

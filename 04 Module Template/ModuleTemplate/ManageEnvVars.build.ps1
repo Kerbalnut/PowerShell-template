@@ -71,7 +71,7 @@ Param(
 	
 	[ValidateSet('None','MSIL','X86','IA64','Amd64','Arm')]
 	#@('None','X86','IA64','Amd64')
-	[System.Reflection.ProcessorArchitecture]$ProcessorArchitecture = 'X86'
+	[System.Reflection.ProcessorArchitecture]$ProcessorArchitecture = 'Amd64'
 	
 )
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -617,6 +617,13 @@ ForEach ($Module in $NoFileExtensions) {
 	# List of all files packaged with this module. As with ModuleList, FileList is an inventory list, and isn't otherwise processed.
 	# Example: FileList = @("File1", "File2", "File3")
 	
+	# NestedModules
+	# Type: Object[]
+	# Modules to import as nested modules of the module specified in RootModule (alias:ModuleToProcess).
+	# Adding a module name to this element is similar to calling Import-Module from within your script or assembly code. The main difference by using a manifest file is that it's easier to see what you're loading. And, if a module fails to load, you will not yet have loaded your actual module.
+	# In addition to other modules, you may also load script (.ps1) files here. These files will execute in the context of the root module. This is equivalent to dot sourcing the script in your root module.
+	# Example: NestedModules = @("script.ps1", @{ModuleName="MyModule"; ModuleVersion="1.0.0.0"; GUID="50cdb55f-5ab7-489f-9e94-4ec21ff51e59"})
+	
 	Write-Verbose "Creating $($Module.NoFileExtension) Module manifest (.psd1 file):"
 	
 	#New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars_Admin.psd1" -RootModule 'ManageEnvVars_Admin.psm1' -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
@@ -666,7 +673,7 @@ ForEach ($Module in $NoFileExtensions) {
 		}
 	}
 	
-	New-ModuleManifest @ParamsHashTable
+	New-ModuleManifest @ParamsHashTable @CommonParameters
 	
 	
 	#https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7.2
@@ -674,7 +681,7 @@ ForEach ($Module in $NoFileExtensions) {
 	#https://docs.microsoft.com/en-us/powershell/module/Microsoft.PowerShell.Core/Test-ModuleManifest
 	
 	
-	#Test-ModuleManifest myModuleName.psd1
+	Test-ModuleManifest -Path $NewModManPath @CommonParameters
 	
 	
 } # End ForEach ($Module in $CompleteModulesInfo)
@@ -682,277 +689,5 @@ ForEach ($Module in $NoFileExtensions) {
 Write-Verbose "End Running New-ModuleManifest"
 
 #-----------------------------------------------------------------------------------------------------------------------
-
-
-
-Pause
-
-
-
-<#
--Guid <System.Guid>
-To create a new GUID in PowerShell, type `[guid]::NewGuid()`.
-
--ReleaseNotes
-
--Description  Describes the contents of the module.
-
--AliasesToExport
--Description
--ModuleList 
-Lists all modules that are included in this module.
-
-Enter each module name as a string or as a hash table with ModuleName and
-ModuleVersion keys. The hash table can also have an optional GUID key. You can
-combine strings and hash tables in the parameter value.
-
-This key is designed to act as a module inventory. The modules that are listed in
-the value of this key arent automatically processed.
--CmdletsToExport
--FunctionsToExport
-
--Guid
--ProjectUri
--LicenseUri
--IconUri
-
--RequiredModules <System.Object[]>
--RequiredAssemblies <System.String[]>
-
--PowerShellVersion <System.Version>
--PowerShellHostVersion <System.Version>
--CompatiblePSEditions {Desktop | Core}
--ProcessorArchitecture {None | MSIL | X86 | IA64 | Amd64 | Arm}
-
-#>
-
-
-<#
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion $ModuleVersion -Author $Author
-
-
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut"
-
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars\0.1\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
-
-
-
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars.psd1" -RootModule 'ManageEnvVars.psm1' -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
-
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars_Admin.psd1" -RootModule 'ManageEnvVars_Admin.psm1' -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
-#>
-
-
-# Root Module
-# Script module or binary module file associated with this manifest. Previous versions of PowerShell called this element the ModuleToProcess.
-# Possible types for the root module can be empty, which creates a Manifest module, the name of a script module (.psm1), or the name of a binary module (.exe or .dll). Placing the name of a module manifest (.psd1) or a script file (.ps1) in this element causes an error.
-# Example: RootModule = 'ScriptModule.psm1'
-
-
-# ModuleList
-# Type: Object[]
-# Specifies all the modules that are packaged with this module. These modules can be entered by name, using a comma-separated string, or as a hash table with ModuleName and GUID keys. The hash table can also have an optional ModuleVersion key. The ModuleList key is designed to act as a module inventory. These modules are not automatically processed.
-# Example: ModuleList = @("SampleModule", "MyModule", @{ModuleName="MyModule"; ModuleVersion="1.0.0.0"; GUID="50cdb55f-5ab7-489f-9e94-4ec21ff51e59"})
-
-# FileList
-# Type: String[]
-# List of all files packaged with this module. As with ModuleList, FileList is an inventory list, and isn't otherwise processed.
-# Example: FileList = @("File1", "File2", "File3")
-
-
-
-#-----------------------------------------------------------------------------------------------------------------------
-
-$FuncParams = @()
-$FuncParams += [PSCustomObject]@{
-	Module = $a
-	ExceptionType = "Function"
-	ExceptionName = "New-TaskTrackingInitiativeTEST"
-}
-
-$FuncParams += [PSCustomObject]@{
-	Module = $a
-	ExceptionType = "Alias"
-	ExceptionName = "New-ProjectInitTEST"
-}
-
-#-----------------------------------------------------------------------------------------------------------------------
-
-#[String[]]$FileNames = @("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1")
-
-ForEach ($file in $FileNames) {
-	#$file = "ManageEnvVars.ps1"
-	$FullPath = Join-Path -Path $HomePath -ChildPath $file
-	#$FullPath = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
-	$ModuleInfo = Get-ModuleCommandInfo -Path $FullPath
-	$FunctionsList = Get-FunctionsInScript -ModuleCommandInfoObj $ModuleInfo
-	$AliasList = Get-AliasesInScript -ModuleCommandInfoObj $ModuleInfo
-	$FileFunctionExceptions = @()
-	$FileAliasExceptions = @()
-	ForEach ($Exception in $Exceptions) {
-		If ($Exception.Module -eq $file) {
-			If ($Exception.ExceptionType -eq 'Function') {
-				$FileFunctionExceptions += $Exception.ExceptionName
-			} ElseIf ($Exception.ExceptionType -eq 'Alias') {
-				$FileAliasExceptions += $Exception.ExceptionName
-			} Else {
-				Write-Warning "Wrong ExceptionType: $($Exception.ExceptionType)"
-				Write-Error "Wrong ExceptionType: $($Exception.ExceptionType)"
-			} # End If/ElseIf ($Exception.ExceptionType)
-		} Else {
-			Write-Verbose "Skipping $($Exception.Module) exception."
-		} # End If ($Exception.Module -eq $file)
-	} # End ForEach ($Exception in $Exceptions)
-	
-	Do {
-		$i = 0
-		$SelectionArray = @()
-		ForEach ($Exception in $FileFunctionExceptions) {
-			$i++
-			$SelectionArray += [PSCustomObject]@{
-				ID = $i
-				Name = $Exception
-				Exception = $Ex
-			}
-		} # End ForEach ($Exception in $FileFunctionExceptions)
-		ForEach ($func in $FunctionsList) {
-			$ExceptionStatus = $False
-			ForEach ($Exception in $FileFunctionExceptions) {
-				If ($Exception -eq $func) {
-					$ExceptionStatus = $True
-				}
-			} # End ForEach ($Exception in $FileFunctionExceptions)
-			$i++
-			$SelectionArray += [PSCustomObject]@{
-				ID = $i
-				Name = $func
-				Exception = $ExceptionStatus
-			}
-		} # End ForEach ($func in $FunctionsList)
-		$i++
-		$SelectionArray += [PSCustomObject]@{
-			ID = $i
-			Name = "<done/cancel>"
-		}
-		$SelectionArray | Format-Table
-		$SelectedID = Read-Host -Prompt "Select ID"
-		
-	} Until ($SelectedID -ge 1 -And $SelectedID -le ($FunctionsList.Count + 1) )
-	
-}
-
-Write-Verbose "Building variables hash table:"
-$Method = 0
-switch ($Method) {
-	0 {
-		$FuncParams = @{TempFileSuffix = $TempFileSuffix}
-	}
-	1 {
-		$FuncParams = @{}
-		If ($TempFileSuffix) {$FuncParams += @{TempFileSuffix = $TempFileSuffix}}
-	}
-	Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}
-} # End switch
-
-
-$FuncParams = @{
-	TempFileSuffix = $TempFileSuffix
-}
-
-Write-Host "End of $ScriptName script."
-# If running in the console, wait for input before closing.
-if ($Host.Name -eq "ConsoleHost")
-{
-    Write-Host "Press any key to continue..."
-    $Host.UI.RawUI.FlushInputBuffer()   # Make sure buffered input doesn't "press a key" and skip the ReadKey().
-    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyUp") > $null
-}
-
-
-Pause
-
-
-
-
-
-
-# Ask user to continue if failure to backup
-$Title = "Backup failed. Continue anyway?"
-$Info = "Backing-up the $EnvVarName environment variable before changing it failed. Continue changing it anyway?"
-# Use Ampersand & in front of letter to designate that as the choice key. E.g. "&Yes" for Y, "Y&Ellow" for E.
-$Yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", "Proceed with setting $EnvVarName Env Var without backup. (Not Recommended)"
-$No = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Halt operation. Inspect backup file location: `"$BackupFile`""
-#$Options = [System.Management.Automation.Host.ChoiceDescription[]] @("&Power", "&Shell", "&Quit")
-$Options = [System.Management.Automation.Host.ChoiceDescription[]]($Yes, $No)
-[int]$DefaultChoice = 1
-$Result = $Host.UI.PromptForChoice($Title, $Info, $Options, $DefaultChoice)
-switch ($Result) {
-	0 {
-		Write-Error "Backup of $EnvVarName var before change failed."
-		Write-Verbose "User verified proceeding without backup."
-	}
-	1 {
-		Write-Verbose "Halting operation."
-		Write-Verbose "Please inspect backup file location for permissions: `n`"$BackupFile`""
-		Split-Path -Path $BackupFile -Parent
-	}
-} # End switch ($Result)
-
-
-
-
-
-
-
-
-Pause
-
-
-
-
-<#
--Guid <System.Guid>
-To create a new GUID in PowerShell, type `[guid]::NewGuid()`.
-
--ReleaseNotes
-
--Description  Describes the contents of the module.
-
--AliasesToExport
--Description
--ModuleList 
-Lists all modules that are included in this module.
-
-Enter each module name as a string or as a hash table with ModuleName and
-ModuleVersion keys. The hash table can also have an optional GUID key. You can
-combine strings and hash tables in the parameter value.
-
-This key is designed to act as a module inventory. The modules that are listed in
-the value of this key arent automatically processed.
--CmdletsToExport
--FunctionsToExport
-
--Guid
--ProjectUri
--LicenseUri
--IconUri
-
--RequiredModules <System.Object[]>
--RequiredAssemblies <System.String[]>
-
--PowerShellVersion <System.Version>
--PowerShellHostVersion <System.Version>
--CompatiblePSEditions {Desktop | Core}
--ProcessorArchitecture {None | MSIL | X86 | IA64 | Amd64 | Arm}
-
-#>
-
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion $ModuleVersion -Author $Author
-
-
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut"
-
-New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars\0.1\ManageEnvVars.psd1" -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
-
 
 
