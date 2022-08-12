@@ -28,21 +28,38 @@ Function Get-ModuleCommandInfo {
 	
 	If -NoVerification switch is used this parameter becomes unnecessary.
 	.PARAMETER DontRemoveModule
-	Will leave temporarily-loaded modules imported after execution. Useful when used with a blank string for the -TempModuleSuffix "" parameter for testing modules that have a #Requires dependency on another module. To clean-up these modules after data is collected, run the same command again but without this -DontRemoveModule enabled.
-	.PARAMETER NoVerification
-	Turns off validation of PowerShell code before returning results. This method will rely exclusively on regex filters for function name discovery.
+	Will leave temporarily-loaded modules imported after execution. Useful when used with a blank string for the -TempModuleSuffix "" parameter, for testing modules that have a #Requires dependency on another module that needs to be loaded and stay loaded. 
 	
-	Not compatible with -RawOutput switch.
+	To clean-up these imported modules after this function's data is collected, run the same command again but without this -DontRemoveModule switch enabled.
+	
+	Not compatible with -NoVerification switch.
+	.PARAMETER NoVerification
+	Turns off validation of PowerShell code before returning results. This method will rely exclusively on regex filters for function name discovery. For example, modules with #Requires -RunAsAdministrator can still be processed even from a non-Admin instance.
+	
+	Currently, using this switch does not enable Alias name discovery. (See Notes for more info.)
+	
+	If this switch is used, one of either the -IncludeSubFunctions or -NoSubFunctions switches are required as well.
+	
+	Not compatible with -DontRemoveModule or -RawOutput switches.
 	.PARAMETER IncludeSubFunctions
 	Includes discovery of sub-functions nested inside other functions.
+	
+	This is normally disabled, because nested functions are not accessible to anything else besides it's parent function. This is only useful for discovering function names that might be useful in other scenarios besides it's parent context.
+	
+	If this switch is used, either the -NoVerification switch is also required, or a value for -TempModuleSuffix must be provided, for example: 
+	-TempModuleSuffix "_GetFunctions"
+	-TempModuleSuffix "_GetAliases"
+	-TempModuleSuffix ""
 	.PARAMETER NoSubFunctions
 	Excludes sub-functions nested inside other functions.
+	
+	This is normally the default option, because nested functions are not accessible to anything else besides it's parent function.
 	.PARAMETER RawOutput
 	Prevents simplifying of output object type. Normally Get-Command output creates a [System.Management.Automation.FunctionInfo] array with [System.Management.Automation.AliasInfo] and [System.Management.Automation.FunctionInfo] objects. This switch will also prevent sub-functions nested inside other functions from being discovered.
 	
 	Not compatible with -NoVerification switch.
 	.NOTES
-	
+	TODO: Currently the NoVerification parameter (regex discovery method) will not look for Aliases. This could change in the future, if the regex filters can be worked out.
 	.EXAMPLE
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1" -Verbose
@@ -52,9 +69,10 @@ Function Get-ModuleCommandInfo {
 	
 	Get-ModuleCommandInfo -Path $Path -Verbose
 	.EXAMPLE
-	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoVerification -Verbose
-	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -IncludeSubFunctions -Verbose
-	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoSubFunctions -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -IncludeSubFunctions -TempModuleSuffix "" -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoVerification -NoSubFunctions -Verbose
+	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -NoVerification -IncludeSubFunctions -Verbose
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -RawOutput -Verbose
 	
 	Get-ModuleCommandInfo -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1" -NoVerification -NoSubFunctions -Verbose
@@ -73,16 +91,18 @@ Function Get-ModuleCommandInfo {
 		[Parameter(ParameterSetName = "NoSubFuncs")]
 		[String]$TempModuleSuffix = "_GetFunctions",
 		
-		[Parameter(ParameterSetName = "IncludeSubFuncs_NoVerification")]
-		[Parameter(ParameterSetName = "NoSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "NoSubFuncs_NoVerification")]
 		[Switch]$NoVerification,
 		
-		[Parameter(ParameterSetName = "IncludeSubFuncs_NoVerification")]
-		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs")]
+		[Alias('IncludeNestedFunctions')]
 		[Switch]$IncludeSubFunctions,
 		
-		[Parameter(ParameterSetName = "NoSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "NoSubFuncs_NoVerification")]
 		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Alias('NoNestedFunctions')]
 		[Switch]$NoSubFunctions,
 		
 		[Parameter(ParameterSetName = "IncludeSubFuncs")]
@@ -419,21 +439,57 @@ Function Get-FunctionsInScript {
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1"
 	#>
 	#Requires -Version 3
-	[CmdletBinding(DefaultParameterSetName = 'Path')]
+	[CmdletBinding(DefaultParameterSetName = "NoSubFuncs")]
 	Param(
 		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
 		           HelpMessage = "Path to ...", 
-		           ParameterSetName = "Path")]
+		           ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "NoSubFuncs")]
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "NoSubFuncs_NoVerification")]
 		[ValidateNotNullOrEmpty()]
 		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
 		[String]$Path,
 		
 		[Parameter(Mandatory = $False, Position = 1, 
 		           ValueFromPipelineByPropertyName = $True, 
-		           ParameterSetName = "Path")]
+		           ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(Mandatory = $False, Position = 1, 
+		           ValueFromPipelineByPropertyName = $True, 
+				   ParameterSetName = "NoSubFuncs")]
 		[String]$TempModuleSuffix = "_GetFunctions",
+		
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "NoSubFuncs_NoVerification")]
+		[Switch]$NoVerification,
+		
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs")]
+		[Alias('IncludeNestedFunctions')]
+		[Switch]$IncludeSubFunctions,
+		
+		[Parameter(Mandatory = $True, ParameterSetName = "NoSubFuncs_NoVerification")]
+		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Alias('NoNestedFunctions')]
+		[Switch]$NoSubFunctions,
+		
+		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Switch]$DontRemoveModule,
 		
 		[Parameter(Mandatory = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
@@ -449,22 +505,14 @@ Function Get-FunctionsInScript {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Write-Verbose "Building variables hash table:"
-	$Method = 0
-	switch ($Method) {
-		0 {
-			$FuncParams = @{
-				TempModuleSuffix = $TempModuleSuffix
-			}
-		}
-		1 {
-			$FuncParams = @{}
-			
-			If ($TempModuleSuffix) {
-				$FuncParams += @{Test2 = $TempModuleSuffix}
-			}
-		}
-		Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}
-	} # End switch
+	$FuncParams = @{}
+	If (!($NoVerification)) {
+		If ($TempModuleSuffix) {$FuncParams += @{TempModuleSuffix = $TempModuleSuffix}}
+	}
+	If ($NoVerification) {$FuncParams += @{NoVerification = $NoVerification}}
+	If ($IncludeSubFunctions) {$FuncParams += @{IncludeSubFunctions = $IncludeSubFunctions}}
+	If ($NoSubFunctions) {$FuncParams += @{NoSubFunctions = $NoSubFunctions}}
+	If ($DontRemoveModule) {$FuncParams += @{DontRemoveModule = $DontRemoveModule}}
 	
 	Write-Verbose "Getting module info:"
 	If ($Path) {
@@ -476,12 +524,11 @@ Function Get-FunctionsInScript {
 	}
 	
 	Write-Verbose "Getting function names from module info:"
-	$Functions = $ModuleCommands | Where-Object -Property 'CommandType' -eq "Function"
+	$Functions = $ModuleCommands | Where-Object -Property 'CommandType' -like "*unction"
 	$FunctionNames = $Functions.Name
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Return $FunctionNames
 } # End of Get-FunctionsInScript function.
-Set-Alias -Name 'New-ProjectInitTEST' -Value 'Get-FunctionsInScript'
 #-----------------------------------------------------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -505,20 +552,57 @@ Function Get-AliasesInScript {
 	$Path = "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1"
 	#>
 	#Requires -Version 3
-	[CmdletBinding(DefaultParameterSetName = 'Path')]
+	[CmdletBinding(DefaultParameterSetName = "NoSubFuncs")]
 	Param(
 		[Parameter(Mandatory = $True, Position = 0, 
 		           ValueFromPipeline = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
-		           ParameterSetName = "Path")]
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "NoSubFuncs")]
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, Position = 0, 
+		           ValueFromPipeline = $True, 
+		           ValueFromPipelineByPropertyName = $True, 
+		           HelpMessage = "Path to ...", 
+		           ParameterSetName = "NoSubFuncs_NoVerification")]
 		[ValidateNotNullOrEmpty()]
 		[Alias('ProjectPath','p','ScriptPath','ModulePath')]
 		[String]$Path,
 		
 		[Parameter(Mandatory = $False, Position = 1, 
 		           ValueFromPipelineByPropertyName = $True, 
-		           ParameterSetName = "Path")]
+		           ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(Mandatory = $False, Position = 1, 
+		           ValueFromPipelineByPropertyName = $True, 
+				   ParameterSetName = "NoSubFuncs")]
 		[String]$TempModuleSuffix = "_GetAliases",
+		
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "NoSubFuncs_NoVerification")]
+		[Switch]$NoVerification,
+		
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs_NoVerification")]
+		[Parameter(Mandatory = $True, ParameterSetName = "IncludeSubFuncs")]
+		[Alias('IncludeNestedFunctions')]
+		[Switch]$IncludeSubFunctions,
+		
+		[Parameter(Mandatory = $True, ParameterSetName = "NoSubFuncs_NoVerification")]
+		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Alias('NoNestedFunctions')]
+		[Switch]$NoSubFunctions,
+		
+		[Parameter(ParameterSetName = "IncludeSubFuncs")]
+		[Parameter(ParameterSetName = "NoSubFuncs")]
+		[Switch]$DontRemoveModule,
 		
 		[Parameter(Mandatory = $True, 
 		           ValueFromPipelineByPropertyName = $True, 
@@ -534,22 +618,14 @@ Function Get-AliasesInScript {
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	Write-Verbose "Building variables hash table:"
-	$Method = 0
-	switch ($Method) {
-		0 {
-			$FuncParams = @{
-				TempModuleSuffix = $TempModuleSuffix
-			}
-		}
-		1 {
-			$FuncParams = @{}
-			
-			If ($TempModuleSuffix) {
-				$FuncParams += @{Test2 = $TempModuleSuffix}
-			}
-		}
-		Default {Throw "Horrible error: Building vars hashtable, wrong `$Method selected: '$Method'"}
-	} # End switch
+	$FuncParams = @{}
+	If (!($NoVerification)) {
+		If ($TempModuleSuffix) {$FuncParams += @{TempModuleSuffix = $TempModuleSuffix}}
+	}
+	If ($NoVerification) {$FuncParams += @{NoVerification = $NoVerification}}
+	If ($IncludeSubFunctions) {$FuncParams += @{IncludeSubFunctions = $IncludeSubFunctions}}
+	If ($NoSubFunctions) {$FuncParams += @{NoSubFunctions = $NoSubFunctions}}
+	If ($DontRemoveModule) {$FuncParams += @{DontRemoveModule = $DontRemoveModule}}
 	
 	Write-Verbose "Getting module info:"
 	If ($Path) {

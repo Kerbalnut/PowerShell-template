@@ -11,25 +11,55 @@
 Function Set-EnvironmentVariable {
 	<#
 	.SYNOPSIS
-	Sets an environment variable, either PATH or the PowerShell Module paths. Required to be run as Administrator.
+	Sets an environment variable, mainly either PATH or the PowerShell Module paths. This function is NOT RECOMMENDED to be used on it's own. Required to be run as Administrator.
 	.DESCRIPTION
-	When given either a PathVar string or ModulePaths string, this function will overwrite either the PATH or PSModulePath environment variable respectively.
+	When given either a -PathVar string or -ModulePaths string, this function will overwrite either the PATH or PSModulePath environment variable respectively.
 	
-	Whatever the current
+	This function is NOT recommended to be run on it's own. It will overwrite the entire target environment var, which for ones like PATH if deleted can be dangerous for other application's stability. Instead it's recommended to use the Add-PathVar and Remove-PathVar functions for manipulating PATH, and Add-PowershellModulePath and Remove-PowershellModulePath for manipulating PSModulePath. (See Links for more related functions.)
+	
+	There are safety features built-in to this function will usually prevent any unwanted dangerous behavoir. Attempts to remove data from an environment var will fail unless the -Remove switch is also used. Two backup copy files will also be created before any change is made, see -BackupFile parameter for more information. The -Force switch will override safety checks and make the change regardless.
+	.PARAMETER PathVar
+	Used to update the PATH environment variable.
+	
+	This must be a single string of folder paths separated by a ; semicolon, with no line breaks. Whatever this input string is will completely overwrite whatever the current PATH var is. See Add-PathVar and Remove-PathVar functions for an easier way to add & remove individual paths from this env var.
+	.PARAMETER ModulePaths
+	Used to update the PSModulePath environment variable.
+	
+	This must be a single string of folder paths separated by a ; semicolon, with no line breaks. Whatever this input string is will completely overwrite whatever the current PSModulePath var is. See Add-PowershellModulePath and Remove-PowershellModulePath functions for an easier way to add & remove individual paths from this env var.
 	.PARAMETER BackupFile
-	This function will always attempt to backup the Environment Variable to a file location first before modifying it. 
+	This function will always attempt to backup the target Environment Variable to a file location first before modifying it. 
 	
-	This can be either a full file path "C:\Users\Test\Desktop\Backup_file.txt" or filename "\Backup_file.txt". If using only a filename, the backup file will be created in the same working directory the Powershell function is executing from. 
+	This can be either a full file path "C:\Users\Test\Desktop\Backup_file.txt", "$env:TEMP\PATH_BACKUP.txt" or a filename "\Backup_file.txt". If using only a filename, the backup file will be created in the same working directory the Powershell function is executing from. 
 	
-	If a file already exists with same name, it will be renamed to file_old. If file_old already exists, it will be deleted.
+	If a file already exists with same name, it will be renamed to file_old. If file_old already exists, it will be deleted. This way two previous versions of the var will always be retained.
+	
+	To recover from a backup: The file contents of the backup files are one long text string of folder paths separated by a ; semicolon, just like the PATH and PSModulePath env vars are. Copy the contents of the backup you want, and run Set-EnvVar again to reset your target var back to that state. Warning, running Set-EnvVar again will trigger the backup process again: deleting the backup_old.txt file, renaming backup.txt to backup_old.txt, and creating a new backup.txt file. Creating a copy of your chosen backup file first is recommended.
+	
+	Example of Backup Recovery using powershell: (update vars as needed)
+	$BackupFile = "$env:TEMP\your_backup_path_here.txt"
+	$RecoveryFile = Join-Path -Path $BackupFile -ChildPath "$env:HOMEPATH\Desktop\my_recovery_file.txt"
+	Copy-Item -Path $BackupFile -Destination $RecoveryFile
+	$RecoveryText = Get-Content -Path $RecoveryFile
+	# For PATH:
+	Set-EnvironmentVariable -PathVar $RecoveryText
+	# or, for PSModulePath:
+	Set-EnvironmentVariable -ModulePaths $RecoveryText
+	# Clean-up:
+	del $RecoveryFile
 	.PARAMETER Remove
-	Surpresses warning prompts when removing Paths. Note, warnings will still be produced when there are only 2 paths left and you are trying to remove one. To surpress all warnings, see Force parameter.
+	Surpresses warning prompts when removing paths. Note, warnings will still be produced when there are only 2 paths left and you are trying to remove one. To surpress all warnings, see Force parameter.
 	.PARAMETER Force
-	Surpresses all warning prompts and safety checks.
+	Surpresses all warning prompts and safety checks. Note: The backup process will still occur even with -Force switch used. See -BackupFile for more information.
 	.NOTES
-	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
-	
-	Maybe some original author credits as well.
+	Quiet, WhatIf, and Confirm switch logic stil needs to be worked out. As well as the warning and error messages text. But otherwise, currently works great with -PathVar, -ModulePaths, -BackupFile, -Remove, and -Force parameters. Is fully functional.
+	.LINK
+	Set-EnvironmentVariable
+	Add-EnvironmentVariable
+	Add-PathVar
+	Add-PowershellModulePath
+	Remove-EnvironmentVariable
+	Remove-PathVar
+	Remove-PowershellModulePath
 	#>
 	[Alias("Set-EnvVar")]
 	#Requires -Module ManageEnvVars -RunAsAdministrator
@@ -42,7 +72,8 @@ Function Set-EnvironmentVariable {
 		[Alias('GetPsModulePaths','GetPowershellModulePaths')]
 		[string]$ModulePaths,
 		
-		[string]$BackupFile = ".\PATH_BACKUP.txt",
+		#[string]$BackupFile = ".\PATH_BACKUP.txt",
+		[string]$BackupFile = "$env:TEMP\PATH_BACKUP.txt",
 		
 		[switch]$Remove,
 		
@@ -343,6 +374,14 @@ Function Add-EnvironmentVariable {
 	Add-EnvironmentVariable -AddToPath "C:\Foobar\Hello world.txt" -Verbose -Debug
 	.EXAMPLE
 	Add-EnvironmentVariable "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
+	.LINK
+	Set-EnvironmentVariable
+	Add-EnvironmentVariable
+	Add-PathVar
+	Add-PowershellModulePath
+	Remove-EnvironmentVariable
+	Remove-PathVar
+	Remove-PowershellModulePath
 	#>
 	[Alias("Add-EnvVar")]
 	[CmdletBinding(DefaultParameterSetName = "PathVar")]
@@ -654,7 +693,13 @@ Function Add-PathVar {
 	Alias: Add-EnvironmentVariable -AddToPathVar
 	Get-Help Add-EnvironmentVariable
 	.LINK
+	Set-EnvironmentVariable
 	Add-EnvironmentVariable
+	Add-PathVar
+	Add-PowershellModulePath
+	Remove-EnvironmentVariable
+	Remove-PathVar
+	Remove-PowershellModulePath
 	#>
 	[Alias("Add-PathEnvVar")]
 	[CmdletBinding()]
@@ -690,10 +735,16 @@ Function Add-PowershellModulePath {
 	.NOTES
 	Alias: Add-EnvironmentVariable -AddToModulePaths "<path_to_add>"
 	Get-Help Add-EnvironmentVariable
-	.LINK
-	Add-EnvironmentVariable
 	.EXAMPLE
 	Add-PowershellModulePath "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
+	.LINK
+	Set-EnvironmentVariable
+	Add-EnvironmentVariable
+	Add-PathVar
+	Add-PowershellModulePath
+	Remove-EnvironmentVariable
+	Remove-PathVar
+	Remove-PowershellModulePath
 	#>
 	[CmdletBinding()]
 	Param(
@@ -738,6 +789,14 @@ Function Remove-EnvironmentVariable {
 	Remove-EnvironmentVariable -RemoveFromPathVar "C:\Demo\path" -Verbose -Debug
 	.EXAMPLE
 	Remove-EnvironmentVariable "C:\Demo\path", "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt" -Verbose -Force
+	.LINK
+	Set-EnvironmentVariable
+	Add-EnvironmentVariable
+	Add-PathVar
+	Add-PowershellModulePath
+	Remove-EnvironmentVariable
+	Remove-PathVar
+	Remove-PowershellModulePath
 	#>
 	[Alias("Remove-EnvVar")]
 	[CmdletBinding(DefaultParameterSetName = "PathVar")]
@@ -958,10 +1017,16 @@ Function Remove-PathVar {
 	.NOTES
 	Alias: Remove-EnvironmentVariable -RemoveFromPathVar "<path_to_Remove>"
 	Get-Help Remove-EnvironmentVariable
-	.LINK
-	Remove-EnvironmentVariable
 	.EXAMPLE
 	Remove-PathVar "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
+	.LINK
+	Set-EnvironmentVariable
+	Add-EnvironmentVariable
+	Add-PathVar
+	Add-PowershellModulePath
+	Remove-EnvironmentVariable
+	Remove-PathVar
+	Remove-PowershellModulePath
 	#>
 	[CmdletBinding()]
 	Param(
@@ -997,10 +1062,16 @@ Function Remove-PowershellModulePath {
 	.NOTES
 	Alias: Remove-EnvironmentVariable -RemoveFromModulePaths "<path_to_Remove>"
 	Get-Help Remove-EnvironmentVariable
-	.LINK
-	Remove-EnvironmentVariable
 	.EXAMPLE
 	Remove-PowershellModulePath "C:\Foobar\Hello world.txt", "C:\Foobar\Hello world2.txt", "C:\Foobar\Hello world3.txt" -Verbose -Force
+	.LINK
+	Set-EnvironmentVariable
+	Add-EnvironmentVariable
+	Add-PathVar
+	Add-PowershellModulePath
+	Remove-EnvironmentVariable
+	Remove-PathVar
+	Remove-PowershellModulePath
 	#>
 	[CmdletBinding()]
 	Param(
