@@ -13,8 +13,20 @@ Optional .xml file name of exceptions file.
 To create a new GUID in PowerShell, type `[guid]::NewGuid()`.
 .PARAMETER Description
 Describes the contents of the module.
+.PARAMETER NestedModules
+Type: Object[]
+
+Modules to import as nested modules of the module specified in RootModule (alias:ModuleToProcess).
+
+Adding a module name to this element is similar to calling Import-Module from within your script or assembly code. The main difference by using a manifest file is that it's easier to see what you're loading. And, if a module fails to load, you will not yet have loaded your actual module.
+
+In addition to other modules, you may also load script (.ps1) files here. These files will execute in the context of the root module. This is equivalent to dot sourcing the script in your root module.
+
+Example: NestedModules = @("script.ps1", @{ModuleName="MyModule"; ModuleVersion="1.0.0.0"; GUID="50cdb55f-5ab7-489f-9e94-4ec21ff51e59"})
 .LINK
 https://www.leeholmes.com/cmdlets-vs-functions/
+.LINK
+https://refactorsaurusrex.com/posts/how-to-compose-a-powershell-module-with-multiple-script-files/
 .NOTES
 Cmdlets vs. Functions:
 - It is currently much easier for ISVs and developers to package and deploy cmdlets than it is to package libraries of functions or scripts.
@@ -33,6 +45,10 @@ Param(
 	[ValidateNotNullOrEmpty()]
 	[Alias('ModuleNames','FilesToExport')]
 	[String[]]$FileNames = $(@("ManageEnvVars.ps1","ManageEnvVars_Admin.ps1")),
+	
+	#[Object[]]$NestedModules = @("script.ps1", @{ModuleName="MyModule"; ModuleVersion="1.0.0.0"; GUID="50cdb55f-5ab7-489f-9e94-4ec21ff51e59"}),
+	#[Object[]]$NestedModules = @("", @("ManageEnvVars","ManageEnvVars.psm1")),
+	[Object[]]$NestedModules = @("", @("ManageEnvVars.psm1")),
 	
 	#[Parameter(Mandatory = $True)]
 	[String]$BuildFuncsName = "BuildModule.ps1",
@@ -140,7 +156,9 @@ Write-Verbose "Loading $BuildFuncsName complete."
 Write-Verbose "Removing extensions from module file names:"
 
 $NoFileExtensions = @()
+$i = 0
 ForEach ($File in $FileNames) {
+	$i++
 	If ($File -match '.+\..+') {$HasFileExtension = $True} Else {$HasFileExtension = $False}
 	# RegEx: .+\..+
 	#    .+    The . matches any character, plus + modifier matches between one and unlimited times (Greedy)
@@ -170,9 +188,18 @@ ForEach ($File in $FileNames) {
 		$NoFileExtension = $File
 	} # End If ($HasFileExtension)
 	
+	$j = 0
+	ForEach ($ReqMod in $NestedModules) {
+		$j++
+		If ($i -eq $j) {
+			$NestedMods = $ReqMod
+		}
+	}
+	
 	$NoFileExtension = [PSCustomObject]@{
 		File = $File
 		NoFileExtension = $NoFileExtension
+		NestedMods = $NestedMods
 	}
 	$NoFileExtensions += $NoFileExtension
 	
@@ -515,7 +542,7 @@ $ModuleList = @()
 $FileList = @()
 ForEach ($Name in $NoFileExtensions) {
 	$ModuleList += $Name.NoFileExtension
-	$FileList += $Name.File
+	$FileList += "$($Name.NoFileExtension).psm1"
 }
 
 $ModulesFolder = Join-Path -Path $HomePath -ChildPath "Modules"
@@ -557,7 +584,6 @@ ForEach ($Module in $NoFileExtensions) {
 	
 	$NewModManName = "$($Module.NoFileExtension).psd1"
 	$NewModManPath = Join-Path -Path $VersionFolder -ChildPath $NewModManName
-	
 	
 	<#
 	-Guid <System.Guid>
@@ -624,7 +650,7 @@ ForEach ($Module in $NoFileExtensions) {
 	# In addition to other modules, you may also load script (.ps1) files here. These files will execute in the context of the root module. This is equivalent to dot sourcing the script in your root module.
 	# Example: NestedModules = @("script.ps1", @{ModuleName="MyModule"; ModuleVersion="1.0.0.0"; GUID="50cdb55f-5ab7-489f-9e94-4ec21ff51e59"})
 	
-	Write-Verbose "Creating $($Module.NoFileExtension) Module manifest (.psd1 file):"
+	Write-Verbose "Creating '$($Module.NoFileExtension)' Module manifest (.psd1 file):"
 	
 	#New-ModuleManifest -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Modules\ManageEnvVars_Admin.psd1" -RootModule 'ManageEnvVars_Admin.psm1' -ModuleVersion "1.0" -Author "Kerbalnut" -FunctionsToExport '*' -AliasesToExport '*'
 	
@@ -638,7 +664,8 @@ ForEach ($Module in $NoFileExtensions) {
 		FunctionsToExport = $FunctionsToExport
 		AliasesToExport = $AliasesToExport
 		ModuleList = $ModuleList
-		FileList = $FileList
+		#FileList = $FileList
+		FileList = $NewModName
 		Description = $Description
 		RequiredModules = $RequiredModules
 		RequiredAssemblies = $RequiredAssemblies
@@ -672,17 +699,42 @@ ForEach ($Module in $NoFileExtensions) {
 			IconUri = $IconUri
 		}
 	}
+	If ($Module.NestedMods) {
+		$NestedModsObject = @()
+		ForEach ($NestedMod in $Module.NestedMods) {
+			[Microsoft.PowerShell.Commands.ModuleSpecification]$NewObj = $NestedMod
+			$NestedModsObject += [Microsoft.PowerShell.Commands.ModuleSpecification]$NewObj
+		}
+		<#
+		$ParamsHashTable += @{
+			NestedModules = $NestedModsObject
+		}
+		#>
+		<#
+		$ParamsHashTable += @{
+			NestedModules = [Microsoft.PowerShell.Commands.ModuleSpecification]"ManageEnvVars.ps1"
+		}
+		#>
+		<#
+		$ParamsHashTable += @{
+			#NestedModules = [Microsoft.PowerShell.Commands.ModuleSpecification]@{ModuleName="MyModule"; ModuleVersion="1.0.0.0"; GUID="50cdb55f-5ab7-489f-9e94-4ec21ff51e59"}
+			#NestedModules = [Microsoft.PowerShell.Commands.ModuleSpecification]@{ModuleName="ManageEnvVars"}
+			NestedModules = [Microsoft.PowerShell.Commands.ModuleSpecification]@{ModuleName="ManageEnvVars"; ModuleVersion="0.1.0.0"}
+			#Error: "The 'ModuleVersion', 'MaximumVersion' and 'RequiredVersion' members do not exist in the hashtable that describes this module. One of these three members must exist, and be assigned a version number in the format 'n.n.n.n'."
+			
+		}
+		#>
+	}
 	
 	New-ModuleManifest @ParamsHashTable @CommonParameters
 	
+	Write-Verbose "Testing '$($Module.NoFileExtension).psd1' Module manifest using Test-ModuleManifest:"
 	
 	#https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7.2
 	
 	#https://docs.microsoft.com/en-us/powershell/module/Microsoft.PowerShell.Core/Test-ModuleManifest
 	
-	
 	Test-ModuleManifest -Path $NewModManPath @CommonParameters
-	
 	
 } # End ForEach ($Module in $CompleteModulesInfo)
 

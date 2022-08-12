@@ -26,6 +26,8 @@ Function Get-EnvironmentVariable {
 	Maybe some original author credits as well.
 	.LINK
 	https://www.tutorialspoint.com/how-to-get-environment-variable-value-using-powershell
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[Alias("Get-EnvironmentVar","Get-EnvVar")]
 	#Requires -Version 3
@@ -183,6 +185,8 @@ Function Get-PathVar {
 	Get-Help Get-EnvironmentVariable
 	.LINK
 	Get-EnvironmentVariable
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[Alias("Get-PathEnvVar")]
 	[CmdletBinding()]
@@ -216,6 +220,8 @@ Function Get-PowershellModulePaths {
 	Get-Help Get-EnvironmentVariable
 	.LINK
 	Get-EnvironmentVariable
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[Alias('Get-PoshModulePaths','Get-PsModulePaths','Get-ModulePaths')]
 	[CmdletBinding()]

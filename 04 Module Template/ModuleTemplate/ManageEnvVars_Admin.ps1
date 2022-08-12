@@ -60,6 +60,8 @@ Function Set-EnvironmentVariable {
 	Remove-EnvironmentVariable
 	Remove-PathVar
 	Remove-PowershellModulePath
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[Alias("Set-EnvVar")]
 	#Requires -Module ManageEnvVars -RunAsAdministrator
@@ -382,6 +384,8 @@ Function Add-EnvironmentVariable {
 	Remove-EnvironmentVariable
 	Remove-PathVar
 	Remove-PowershellModulePath
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[Alias("Add-EnvVar")]
 	[CmdletBinding(DefaultParameterSetName = "PathVar")]
@@ -700,6 +704,8 @@ Function Add-PathVar {
 	Remove-EnvironmentVariable
 	Remove-PathVar
 	Remove-PowershellModulePath
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[Alias("Add-PathEnvVar")]
 	[CmdletBinding()]
@@ -745,6 +751,8 @@ Function Add-PowershellModulePath {
 	Remove-EnvironmentVariable
 	Remove-PathVar
 	Remove-PowershellModulePath
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[CmdletBinding()]
 	Param(
@@ -797,6 +805,8 @@ Function Remove-EnvironmentVariable {
 	Remove-EnvironmentVariable
 	Remove-PathVar
 	Remove-PowershellModulePath
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[Alias("Remove-EnvVar")]
 	[CmdletBinding(DefaultParameterSetName = "PathVar")]
@@ -1027,6 +1037,8 @@ Function Remove-PathVar {
 	Remove-EnvironmentVariable
 	Remove-PathVar
 	Remove-PowershellModulePath
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[CmdletBinding()]
 	Param(
@@ -1072,6 +1084,8 @@ Function Remove-PowershellModulePath {
 	Remove-EnvironmentVariable
 	Remove-PathVar
 	Remove-PowershellModulePath
+	.LINK
+	https://github.com/Kerbalnut/PowerShell-template
 	#>
 	[CmdletBinding()]
 	Param(
