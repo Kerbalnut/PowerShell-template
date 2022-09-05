@@ -423,9 +423,26 @@ Function Get-FunctionsInScript {
 	Returns a list of Function names in a PowerShell script.
 	.DESCRIPTION
 	This is an alias function for Get-ModuleCommandInfo, with output filtered to show function names. Use -ModuleCommandInfoObj parameter for filtering Get-ModuleCommandInfo output directly.
+	
+	Please note that if the target script has a #Requires -RunAsAdministrator line in it, this function will also need to be run as Administrator to properly load & verify the target PowerShell code. To skip this check, use the -NoVerification switch. The -NoVerification switch also requires either -NoSubFunctions or -IncludeSubFunctions switch. For more information, see Get-Help Get-FunctionsInScript -Examples
 	.NOTES
 	.PARAMETER TempModuleSuffix
-	This function is an alias for Get-ModuleCommandInfo. See Get-ModuleCommandInfo -TempModuleSuffix parameter help text for info.
+	For more info see: 
+	Get-Help Get-ModuleCommandInfo -Parameter TempModuleSuffix
+	.PARAMETER NoVerification
+	For more info see: 
+	Get-Help Get-ModuleCommandInfo -Parameter NoVerification
+	.PARAMETER NoSubFunctions
+	For more info see: 
+	Get-Help Get-ModuleCommandInfo -Parameter NoSubFunctions
+	.PARAMETER IncludeSubFunctions
+	For more info see: 
+	Get-Help Get-ModuleCommandInfo -Parameter IncludeSubFunctions
+	.EXAMPLE
+	Get-FunctionsInScript "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars_Admin.ps1" -NoVerification -NoSubFunctions
+	
+	The -NoVerification switch allows scripts with #Requires -RunAsAdministrator to be loaded. The -NoVerification switch also requires either -NoSubFunctions or -IncludeSubFunctions switch.
+	
 	.EXAMPLE
 	Get-FunctionsInScript -Path $Path
 	Get-FunctionsInScript -Path "$Home\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\ManageEnvVars.ps1" -TempModuleSuffix "_FindFuncs" -Verbose
