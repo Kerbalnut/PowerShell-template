@@ -24,10 +24,9 @@ REM ECHO DEBUGGING: Parameter %%1: "%1"
 IF "%1"=="RunAsAdmin" GOTO RUNASADMIN
 IF "%1"=="NoAdmin" GOTO SKIPADMIN
 
-::GOTO SKIPADMIN & REM <-- Leave this line in to always skip Elevation Prompt -->
-GOTO RUNASADMIN & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
+GOTO SKIPADMIN & REM <-- Leave this line in to always skip Elevation Prompt -->
+::GOTO RUNASADMIN & REM <-- Leave this line in to always Run As Administrator (skip choice) -->
 :: Comment out both GOTO statements to prompt user to elevate.
-ECHO:
 ECHO CHOICE Loading...
 ECHO:
 :: https://ss64.com/nt/choice.html
@@ -82,17 +81,16 @@ REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 :: Param1 = Full path to PowerShell file to run
 
-::SET "_PowerShellFile=%~dpn0.ps1" & REM %~dpn0.ps1 This script's (%0) [D]rive letter, [P]ath, and [N]ame, but with a .ps1 extension. E.g. HelloWorld.bat will launch HelloWorld.ps1
-SET "_PowerShellFile=%~dp0ManageEnvVars.build.ps1" & REM This script's Drive letter and Path, but pointing to the ManageEnvVars.build.ps1
+SET "_PowerShellFile=%~dpn0.ps1" & REM %~dpn0.ps1 This script's (%0) [D]rive letter, [P]ath, and [N]ame, but with a .ps1 extension. E.g. HelloWorld.bat will launch HelloWorld.ps1
 
 REM - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 :: Param2 = Run-as-administrator, Override user-prompt with default choice: 
 
 IF /I NOT "%_ADMIN%"=="TRUE" (
-	SET "_ADMIN_OPTION=RunAsAdministrator"
-) ELSE (
 	SET "_ADMIN_OPTION=RunNonElevated"
+) ELSE (
+	SET "_ADMIN_OPTION=RunAsAdministrator"
 )
 
 :: Set as either "RunNonElevated" or "RunAsAdministrator"
@@ -300,6 +298,13 @@ ECHO:
 CALL :GetWindowsVersion
 ECHO:
 
+:CheckAdmin
+:: First check if we are running As Admin/Elevated
+CALL :GetIfAdmin
+::CALL :GetIfAdmin NoEcho
+ECHO DEBUGGING:  Got Admin permissions: %_IS_ADMIN%
+ECHO DEBUGGING:                         %_ADMIN_OPTION%
+
 :ChooseAdminOptions
 REM ECHO DEBUGGING: "%%_ADMIN_OPTION%%" = "%_ADMIN_OPTION%"
 IF /I "%_ADMIN_OPTION%"=="RunNonElevated" GOTO ChooseRunOptions
@@ -343,10 +348,6 @@ GOTO MainMenu
 :: https://ss64.com/ps/call.html
 
 :RunScript
-:: First check if we are running As Admin/Elevated
-CALL :GetIfAdmin
-::CALL :GetIfAdmin NoEcho
-::ECHO Got Admin permissions: %_IS_ADMIN%
 IF %_WindowsVersion% EQU 10 (
 	REM Windows 10 has PowerShell width CMD.exe windows.
 	IF /I "%_ADMIN_OPTION%"=="RunNonElevated" (
@@ -381,10 +382,6 @@ IF %_WindowsVersion% EQU 10 (
 GOTO Footer
 
 :VerboseRun
-:: First check if we are running As Admin/Elevated
-CALL :GetIfAdmin
-::CALL :GetIfAdmin NoEcho
-::ECHO Got Admin permissions: %_IS_ADMIN%
 IF %_WindowsVersion% EQU 10 (
 	REM Windows 10 has PowerShell width CMD.exe windows.
 	IF /I "%_ADMIN_OPTION%"=="RunNonElevated" (
@@ -418,10 +415,6 @@ IF %_WindowsVersion% EQU 10 (
 GOTO Footer
 
 :DebugScript
-:: First check if we are running As Admin/Elevated
-CALL :GetIfAdmin
-::CALL :GetIfAdmin NoEcho
-::ECHO Got Admin permissions: %_IS_ADMIN%
 ::PowerShell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command . '%_PowerShellFile%' -LaunchedInCmd -Debug
 IF %_WindowsVersion% EQU 10 (
 	REM Windows 10 has PowerShell width CMD.exe windows.
@@ -445,10 +438,6 @@ IF %_WindowsVersion% EQU 10 (
 GOTO Footer
 
 :DebugAndVerbose
-:: First check if we are running As Admin/Elevated
-CALL :GetIfAdmin
-::CALL :GetIfAdmin NoEcho
-::ECHO Got Admin permissions: %_IS_ADMIN%
 ::PowerShell.exe -NoProfile -ExecutionPolicy RemoteSigned -Command . '%_PowerShellFile%' -LaunchedInCmd -Verbose -Debug
 IF %_WindowsVersion% EQU 10 (
 	REM Windows 10 has PowerShell width CMD.exe windows.
