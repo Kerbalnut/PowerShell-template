@@ -5,6 +5,9 @@ Set a sleep timer for the local computer
 .DESCRIPTION
 This script is a series of funcitons to schedule a task or run a countdown timer to sleep/hibernate/shutdown/reboot the local computer.
 .NOTES
+.EXAMPLE
+Start-SleepTimer -Hours 2 -Minutes 30 -Action 'sleep'
+Starts a sleep countdown timer for 2 hours and 30 minutes from now. 
 #>
 [CmdletBinding(
 	DefaultParameterSetName = 'StringName',
@@ -12,9 +15,16 @@ This script is a series of funcitons to schedule a task or run a countdown timer
 )]
 Param(
 	[Parameter(HelpMessage = "Immediately executes power state command")]
+	[Alias('ScriptCmd','ScheduledCmd')]
 	[Switch]$SetPower,
 	
-	[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'StringName')]
+	[Parameter(
+		Mandatory = $False, 
+		Position = 0, 
+		ValueFromPipeline = $True, 
+		ValueFromPipelineByPropertyName = $True, 
+		ParameterSetName = 'StringName'
+	)]
 	[ValidateSet('Sleep','Suspend','Standby','Hibernate')]
 	[Alias('PowerAction')]
 	[String]$Action,
@@ -22,11 +32,18 @@ Param(
 	[Switch]$Force
 )
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Hardcoded overrides:
+$VerbosePreference = 'Continue'
+#$VerbosePreference = 'SilentlyContinue'
+#$VerbosePreference = 'Continue'
+#$VerbosePreference = 'SilentlyContinue'
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 $CommonParameters = @{ # These get activated when adding [CmdletBinding()] and param() to a script/function.
 	Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
 	Debug = [System.Management.Automation.ActionPreference]$DebugPreference
 }
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Risk mitigation parameters:
 #[System.Management.Automation.ConfirmImpact]$ConfirmPreference = 'High' # ConfirmPreference var has 4 possible ConfirmImpact values: None, Low, Medium, or High (default).
 If ($ConfirmPreference -eq 'Low') {$Confirm = $True} Else {$Confirm = $False} # When calling a function with -Confirm, the value of $ConfirmPreference gets set to Low inside the scope of your function.
 $RiskMitigationParameters = @{ # These params -WhatIf and -Confirm get automatically added when adding [CmdletBinding(SupportsShouldProcess)] to a script/function.
@@ -35,27 +52,27 @@ $RiskMitigationParameters = @{ # These params -WhatIf and -Confirm get automatic
 }
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Get this script's path:
-#$PSScriptRoot
-#$PSCommandPath
-#$MyInvocation.MyCommand.Name
-#$MyInvocation.MyCommand.Definition
+#$ScriptFolder = $PSScriptRoot
+#$ScriptPath = $PSCommandPath
+$ScriptPath = $MyInvocation.MyCommand.Definition
 $ScriptName = $MyInvocation.MyCommand.Name
-Write-Verbose -Message "[$ScriptName]: Starting script"
+Write-Verbose -Message "[$ScriptName]: Starting script `"$ScriptPath`""
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #-----------------------------------------------------------------------------------------------------------------------
 # [Functions:]----------------------------------------------------------------------------------------------------------
-#-----------------------------------------------------------------------------------------------------------------------
-
 Write-Verbose -Message "[$ScriptName]: Loading Functions"
+
 #-----------------------------------------------------------------------------------------------------------------------
 Function Set-PowerState {
 	<#
 	.SYNOPSIS
 	Instantly puts to sleep/hibernates/shuts down/restarts the local computer
 	.DESCRIPTION
-	By default will put the current pc to sleep. Will execute immediately, see other functions for timer mechanisms.
+	By default will put the current pc to sleep. Will execute immediately. Use -WhatIf switch to see what would happen without changing power state. For timed operations see Start-SleepTimer instead.
 	.PARAMETER DisableWake
 	From the original StackOverflow answer:
+	https://stackoverflow.com/questions/20713782/suspend-or-hibernate-from-powershell
 	Note: In my testing, the -DisableWake option did not make any distinguishable difference that I am aware of. I was still capable of using the keyboard and mouse to wake the computer, even when this parameter was set to $True.
 	
 	About disableWakeEvent... This parameter can prevent SetWaitableTimer() to awake the computer. SetWaitableTimer() used by Task Scheduler (at least). See details here: msdn.microsoft.com/en-us/library/windows/desktop/aa373235.aspx – CoolCmd
@@ -72,7 +89,7 @@ Function Set-PowerState {
 	Changelog:
 	v1.0 - Created function with switches for Sleep (default), Hibernate, DisableWake, and Force using [System.Windows.Forms.PowerState].
 	
-	References
+	References:
 	https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.powerstate?view=windowsdesktop-7.0
 	
 	Hibernate 	1 	
@@ -115,15 +132,22 @@ Function Set-PowerState {
 			Confirm = [bool]$Confirm
 		}
 		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-		$FunctionName = $MyInvocation.MyCommand
-		
+		# Get this function's path:
+		$FunctionPath = $PSCommandPath
+		#$FunctionContent = $MyInvocation.MyCommand.Definition
+		$FunctionName = $MyInvocation.MyCommand.Name
+		#$FunctionName = $MyInvocation.MyCommand
+		Write-Verbose -Message "[$FunctionName]: Starting function `"$FunctionPath`""
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 		Write-Verbose -Message "[$FunctionName]: Executing Begin block"
 		
-		If (!$DisableWake) { $DisableWake = $false }
-		If (!$Force) { $Force = $false }
+		If (!$DisableWake -or $null -eq $DisableWake -or $DisableWake -eq '') { $DisableWake = $false }
+		If (!$Force -or $null -eq $Force -or $Force -eq '') { $Force = $false }
 		
-		Write-Verbose -Message ('Force is: {0}' -f $Force)
-		Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake)
+		#Write-Verbose -Message ('Force is: {0}' -f $Force)
+		#Write-Verbose -Message ('DisableWake is: {0}' -f $DisableWake)
+		Write-Verbose "[$FunctionName]: Force is: $Force"
+		Write-Verbose "[$FunctionName]: DisableWake is: $DisableWake"
 		
 		Add-Type -AssemblyName System.Windows.Forms
 		
@@ -134,7 +158,7 @@ Function Set-PowerState {
 			[System.Windows.Forms.PowerState]$PowerState = [System.Windows.Forms.PowerState]::Hibernate
 		}
 		
-		Write-Verbose "PowerState: `'$PowerState`'"
+		Write-Verbose "[$FunctionName]: PowerState: `'$PowerState`'"
 	} # End Begin
 	Process {
 		Write-Verbose -Message "[$FunctionName]: Executing Process block"
@@ -156,6 +180,7 @@ Function Set-PowerState {
 			}
 		}
 		
+		Write-Verbose -Message "[$FunctionName]: End Process block"
 	} # End Process
 	End {
 		Write-Verbose -Message "[$FunctionName]: Executing End block"
@@ -163,61 +188,8 @@ Function Set-PowerState {
 	} # End End block
 } # End Function Set-PowerState
 #-----------------------------------------------------------------------------------------------------------------------
-Set-PowerState -Action Sleep @CommonParameters #-WhatIf #@RiskMitigationParameters
-#-WhatIf 
-return
-exit
-
-
-powershell.exe -File "C:\Users\G\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Start-SleepTimer.ps1"
-
-
-#$ScriptExecution = "Powershell.exe -file `"$FilePath`" $ScriptArgs"
-#$ScriptExecution = "-NoLogo -ExecutionPolicy Bypass -NoProfile -NonInteractive -File `"$FilePath`" $ScriptArgs"
-#$A = New-ScheduledTaskAction Execute $ScriptExecution
-#$A = New-ScheduledTaskAction -Execute "Powershell.exe" -Argument $ScriptExecution -WorkingDirectory $ScriptProjFolder
-
-
-
-
-If ($SetPower) {
-	Write-Verbose -Message "[$ScriptName]: Activating Power state command"
-	$PowerStateParams = @{
-		DisableWake = $DisableWake
-		Force = $Force
-	}
-	Set-PowerState -Action $Action @PowerStateParams @CommonParameters @RiskMitigationParameters
-}
-
-
-
-.EXAMPLE
-# Countdown from 24h exactly (86400 seconds)
-for ($i = 86400; $i -ge 0; $i--) {
-	Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i)"
-}
-.EXAMPLE
-# Countdown from 24h 1m to 2m less
-$StartTime = New-TimeSpan -Hours 24 -Minutes 1
-$EndTime = $StartTime - (New-TimeSpan -Minutes 2)
-for ($i = $StartTime.TotalSeconds; $i -ge $EndTime.TotalSeconds; $i--) {
-	Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i)"
-}
-.EXAMPLE
-# Countdown from 93631 seconds (1d 2h 31s) to 2m less
-$StartTime = New-TimeSpan -Seconds 93631
-$EndTime = $StartTime - (New-TimeSpan -Minutes 2)
-for ($i = $StartTime.TotalSeconds; $i -ge $EndTime.TotalSeconds; $i--) {
-	Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i)"
-}
-.EXAMPLE
-# Countdown from 93631 seconds (1d 2h 31s) to 2m less
-$StartTime = New-TimeSpan -Seconds 93631
-$EndTime = $StartTime - (New-TimeSpan -Minutes 2)
-for ($i = $StartTime.TotalSeconds; $i -ge $EndTime.TotalSeconds; $i--) {
-	Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i -ExactTime)"
-}
-
+#Set-PowerState -Action Sleep @CommonParameters #@RiskMitigationParameters
+Set-PowerState -Action Sleep @CommonParameters -WhatIf #@RiskMitigationParameters
 
 #-----------------------------------------------------------------------------------------------------------------------
 Function Format-ShortTimeString {
@@ -279,28 +251,35 @@ Function Format-ShortTimeString {
 	.EXAMPLE
 	# Countdown from 24h exactly (86400 seconds)
 	for ($i = 86400; $i -ge 0; $i--) {
-		Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i)"
+		Write-Host "$($i.ToString().PadLeft(5,' ')) = '$(Format-ShortTimeString -Seconds $i)'"
 	}
 	.EXAMPLE
-	# Countdown from 24h 1m to 2m less
+	Write-Host "Countdown from 24h 1m to 2m less"
 	$StartTime = New-TimeSpan -Hours 24 -Minutes 1
 	$EndTime = $StartTime - (New-TimeSpan -Minutes 2)
 	for ($i = $StartTime.TotalSeconds; $i -ge $EndTime.TotalSeconds; $i--) {
-		Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i)"
+		Write-Host "$($i.ToString().PadLeft(5,' ')) = '$(Format-ShortTimeString -Seconds $i)'"
 	}
 	.EXAMPLE
-	# Countdown from 93631 seconds (1d 2h 31s) to 2m less
+	Write-Host "Countdown from 93631 seconds (1d 2h 31s) to 2m less"
 	$StartTime = New-TimeSpan -Seconds 93631
 	$EndTime = $StartTime - (New-TimeSpan -Minutes 2)
 	for ($i = $StartTime.TotalSeconds; $i -ge $EndTime.TotalSeconds; $i--) {
-		Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i)"
+		Write-Host "$($i.ToString().PadLeft(5,' ')) = '$(Format-ShortTimeString -Seconds $i)'"
 	}
 	.EXAMPLE
-	# Countdown from 93631 seconds (1d 2h 31s) to 2m less
+	Write-Host "Countdown from 93631 seconds (1d 2h 31s) to 2m less, with -ExactTime switch"
 	$StartTime = New-TimeSpan -Seconds 93631
 	$EndTime = $StartTime - (New-TimeSpan -Minutes 2)
 	for ($i = $StartTime.TotalSeconds; $i -ge $EndTime.TotalSeconds; $i--) {
-		Write-Host "$($i.ToString().PadLeft(5,' ')) = $(Format-ShortTimeString -Seconds $i -ExactTime)"
+		Write-Host "$($i.ToString().PadLeft(5,' ')) = '$(Format-ShortTimeString -Seconds $i -ExactTime)'"
+	}
+	.EXAMPLE
+	Write-Host "Countdown from 86431 seconds (1d 31s) to 2m less, with -Round switch"
+	$StartTime = New-TimeSpan -Seconds 86431
+	$EndTime = $StartTime - (New-TimeSpan -Minutes 2)
+	for ($i = $StartTime.TotalSeconds; $i -ge $EndTime.TotalSeconds; $i--) {
+		Write-Host "$($i.ToString().PadLeft(5,' ')) = '$(Format-ShortTimeString -Seconds $i -Round)'"
 	}
 	#>
 	[CmdletBinding()]
@@ -334,46 +313,46 @@ Function Format-ShortTimeString {
 		}
 		$Result = $Result.Trim()
 	} Else {
-	If ($TS.TotalSeconds -le 60) {
-		$Result = "$([math]::Round($TS.TotalSeconds,1))" + "s"
-	} Else {
-		If ($TS.TotalMinutes -lt 60) {
-			If ($TS.Seconds -eq 0 -Or $Round) {
-				$Result = "$([math]::Round($TS.TotalMinutes,1))" + "m"
-			} Else {
-				$Result = "$($TS.Minutes)m $($TS.Seconds)s"
-			}
+		If ($TS.TotalSeconds -le 60) {
+			$Result = "$([math]::Round($TS.TotalSeconds,1))" + "s"
 		} Else {
-			If ($TS.TotalHours -lt 24) {
-				If ($([math]::Round($TS.TotalMinutes,0)) -eq 1440) {
+			If ($TS.TotalMinutes -lt 60) {
+				If ($TS.Seconds -eq 0 -Or $Round) {
+					$Result = "$([math]::Round($TS.TotalMinutes,1))" + "m"
+				} Else {
+					$Result = "$($TS.Minutes)m $($TS.Seconds)s"
+				}
+			} Else {
+				If ($TS.TotalHours -lt 24) {
+					If ($([math]::Round($TS.TotalMinutes,0)) -eq 1440) {
+						$Result = "24h"
+					} Else {
+						If ($TS.Minutes -eq 0) {
+							$Result = "$($TS.Hours)h"
+						} Else {
+							$Result = "$($TS.Hours)h $($TS.Minutes)m"
+						}
+					}
+				} ElseIf ($([math]::Round($TS.TotalMinutes,0)) -eq 1440) {
 					$Result = "24h"
 				} Else {
 					If ($TS.Minutes -eq 0) {
-						$Result = "$($TS.Hours)h"
+						If ($TS.Hours -eq 0) {
+							$Result = "$($TS.Days)d"
+						} Else {
+							$Result = "$($TS.Hours)h $($TS.Minutes)m"
+							$Result = "$($TS.Days)d $($TS.Hours)h"
+						}
 					} Else {
-						$Result = "$($TS.Hours)h $($TS.Minutes)m"
-					}
-				}
-			} ElseIf ($([math]::Round($TS.TotalMinutes,0)) -eq 1440) {
-				$Result = "24h"
-			} Else {
-				If ($TS.Minutes -eq 0) {
-					If ($TS.Hours -eq 0) {
-						$Result = "$($TS.Days)d"
-					} Else {
-						$Result = "$($TS.Hours)h $($TS.Minutes)m"
-						$Result = "$($TS.Days)d $($TS.Hours)h"
-					}
-				} Else {
-					If ($TS.Hours -eq 0) {
-						$Result = "$($TS.Days)d $($TS.Minutes)m"
-					} Else {
-						$Result = "$($TS.Days)d $($TS.Hours)h $($TS.Minutes)m"
-					} # End If ($TS.Hours -eq 0)
-				} # End If ($TS.Minutes -eq 0)
-			} # End If ($TS.TotalHours -lt 24)
-		} # End If ($TS.TotalMinutes -lt 60)
-	} # End If ($TS.TotalSeconds -le 60)
+						If ($TS.Hours -eq 0) {
+							$Result = "$($TS.Days)d $($TS.Minutes)m"
+						} Else {
+							$Result = "$($TS.Days)d $($TS.Hours)h $($TS.Minutes)m"
+						} # End If ($TS.Hours -eq 0)
+					} # End If ($TS.Minutes -eq 0)
+				} # End If ($TS.TotalHours -lt 24)
+			} # End If ($TS.TotalMinutes -lt 60)
+		} # End If ($TS.TotalSeconds -le 60)
 	} # End If/Else ($ExactTime)
 	
 	Write-Verbose -Message "[$FunctionName]: Ending function"
@@ -417,24 +396,52 @@ Function Start-SleepTimer {
 	[Alias("Set-SleepTimer")]
 	#Requires -Version 3
 	#[CmdletBinding(DefaultParameterSetName = 'Timer')]
-	[CmdletBinding(DefaultParameterSetName = 'HoursMins')]
+	#[CmdletBinding(DefaultParameterSetName = 'HoursMins')]
+	[CmdletBinding(
+		DefaultParameterSetName = 'HoursMins',
+		SupportsShouldProcess = $True
+	)]
 	Param(
-		[Parameter(Mandatory = $True, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'DateTime')]
+		[Parameter(
+			Mandatory = $True, 
+			Position = 0, 
+			ValueFromPipeline = $True, 
+			ValueFromPipelineByPropertyName = $True, 
+			ParameterSetName = 'DateTime'
+		)]
 		[ValidateNotNullOrEmpty()]
 		[Alias('SleepTime')]
 		[DateTime]$DateTime,
 		
-		[Parameter(Mandatory = $False, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'Timer')]
+		[Parameter(
+			Mandatory = $False, 
+			Position = 0, 
+			ValueFromPipeline = $True, 
+			ValueFromPipelineByPropertyName = $True, 
+			ParameterSetName = 'Timer'
+		)]
 		[ValidateNotNullOrEmpty()]
 		[Alias('SleepTimer','Timer')]
 		[TimeSpan]$TimerDuration = (New-TimeSpan -Hours 2 -Minutes 0),
+		#[TimeSpan]$TimerDuration = (New-TimeSpan -Hours 2 -Minutes 0),
 		#[TimeSpan]$TimerDuration = (New-TimeSpan -Minutes 3),
 		#[TimeSpan]$TimerDuration = (New-TimeSpan -Seconds 10),
 		
-		[Parameter(Mandatory = $True, Position = 0, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
+		[Parameter(
+			Mandatory = $True, 
+			Position = 0, 
+			ValueFromPipeline = $True, 
+			ValueFromPipelineByPropertyName = $True, 
+			ParameterSetName = 'HoursMins'
+		)]
 		[Int32]$Hours,
 		
-		[Parameter(Mandatory = $True, Position = 1, ValueFromPipelineByPropertyName = $True, ParameterSetName = 'HoursMins')]
+		[Parameter(
+			Mandatory = $True, 
+			Position = 1, 
+			ValueFromPipelineByPropertyName = $True, 
+			ParameterSetName = 'HoursMins'
+		)]
 		[Alias('Mins')]
 		[Int32]$Minutes,
 		
@@ -469,8 +476,15 @@ Function Start-SleepTimer {
 		Confirm = [bool]$Confirm
 	}
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	$FunctionName = $MyInvocation.MyCommand
-	Write-Verbose -Message "[$FunctionName]: Beginning function"
+	# Get this function's path:
+	$FunctionPath = $PSCommandPath
+	#$FunctionContent = $MyInvocation.MyCommand.Definition
+	$FunctionName = $MyInvocation.MyCommand.Name
+	#$FunctionName = $MyInvocation.MyCommand
+	Write-Verbose -Message "[$FunctionName]: Starting function `"$FunctionPath`""
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	Write-Verbose -Message "[$FunctionName]: Set up params"
 	
 	$StartTime = Get-Date
 	
@@ -479,11 +493,11 @@ Function Start-SleepTimer {
 	#[DateTime]$DateTime = (Get-Date) + [TimeSpan](New-TimeSpan -Hours 2 -Minutes 30)
 	
 	If ($DateTime) {
-		Write-Verbose "ParameterSet selected: 'DateTime'"
+		Write-Verbose "[$FunctionName]: ParameterSet selected: 'DateTime'"
 		[DateTime]$EndTime = Get-Date -Date $DateTime -Millisecond 0
 		[TimeSpan]$TimerDuration = [DateTime]$EndTime - (Get-Date -Date $StartTime -Millisecond 0)
 	} ElseIf ($Hours -Or $Minutes) {
-		Write-Verbose "ParameterSet selected: 'HoursMins'"
+		Write-Verbose "[$FunctionName]: ParameterSet selected: 'HoursMins'"
 		
 		$TimeSpanParams = @{}
 		If ($Hours) { $TimeSpanParams += @{Hours = $Hours} }
@@ -492,11 +506,11 @@ Function Start-SleepTimer {
 		$TimerDuration = New-TimeSpan @TimeSpanParams @CommonParameters
 		[DateTime]$EndTime = [DateTime]$StartTime + [TimeSpan]$TimerDuration
 	} ElseIf ($TimerDuration) {
-		Write-Verbose "ParameterSet selected: 'Timer'"
+		Write-Verbose "[$FunctionName]: ParameterSet selected: 'Timer'"
 		[DateTime]$EndTime = [DateTime]$StartTime + [TimeSpan]$TimerDuration
 	}
-	Write-Verbose "`$EndTime = $EndTime"
-	Write-Verbose "`$TimerDuration = $TimerDuration"
+	Write-Verbose "[$FunctionName]: `$EndTime = $EndTime"
+	Write-Verbose "[$FunctionName]: `$TimerDuration = $TimerDuration"
 	
 	$SetPowerStateParams = @{
 		DisableWake = $DisableWake
@@ -505,10 +519,299 @@ Function Start-SleepTimer {
 	
 	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	
+	Write-Verbose -Message "[$FunctionName]: Sub functions"
+	#-----------------------------------------------------------------------------------------------------------------------
+	#-----------------------------------------------------------------------------------------------------------------------
+	function Register-SchdTask {
+		<#
+		.SYNOPSIS
+		.DESCRIPTION
+		.NOTES
+		#>
+		[CmdletBinding(
+			SupportsShouldProcess,
+			DefaultParameterSetName = 'MinutesFromNow'
+		)]
+		param (
+			$ServerStartupScript = "D:\SteamLibrary\steamapps\common\Valheim dedicated server\start_headless_server.bat",
+			$ProcessName = "valheim_server",
+			$ThunderstoreMMProfileName = "wordpass_server_vanilla",
+			
+			[Parameter(Mandatory=$False)]
+			$LaunchParams,
+			[Parameter(Mandatory=$False)]
+			$CronJobMobFile,
+			
+			# Set to $True if planning to keep the server offline for a little while
+			[switch]$ShutDown,
+			
+			[Parameter(ParameterSetName = 'MinuteMark')]
+			[ValidateRange(0,59)]
+			[int]$MinuteMark,
+			[Parameter(ParameterSetName = 'MinutesFromNow')]
+			[int]$MinutesFromNow,
+			[Parameter(ParameterSetName = 'DateTimeOnce')]
+			[DateTime]$DateTimeOnce,
+			[Parameter(ParameterSetName = 'DateTimeOnce',Mandatory=$False)]
+			[TimeSpan]$RepeatInterval,
+			[Parameter(ParameterSetName = 'DateTimeDaily')]
+			[DateTime]$DateTimeDaily,
+			[Parameter(ParameterSetName = 'DateTimeDaily',Mandatory=$False)]
+			[Int32]$DaysInterval,
+			
+			[switch]$RunWithHighestPrivileges,
+			[switch]$RunAsSystemServiceAccount,
+			
+			[int]$SecondsBuffer = 25,
+			
+			[string]$SchedTaskName = "Restart Server",
+			[string]$SchedTaskPath = "Valheim Server"
+			
+			
+		)
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		# Get this function's path:
+		$FunctionPath = $PSCommandPath
+		#$FunctionContent = $MyInvocation.MyCommand.Definition
+		$FunctionName = $MyInvocation.MyCommand.Name
+		#$FunctionName = $MyInvocation.MyCommand
+		Write-Verbose -Message "[$FunctionName]: Starting function `"$FunctionPath`""
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		#-----------------------------------------------------------------------------------------------------------------------
+		Write-Verbose "[$FunctionName]: Scheduled Task method:"
+		return
+		
+		# Scheduled Trigger:
+		#$T = New-ScheduledTaskTrigger -Once [-RepetitionInterval <TimeSpan>] -At <DateTime>
+		#$T = New-ScheduledTaskTrigger -Daily [-DaysInterval <Int32>] -At <DateTime>
+		#$MiniTime = "$((Get-Date).Hour):$((Get-Date).Minute)"
+		$MiniTimeNow = "$(Get-Date -UFormat '%I:%M %p / %R')"
+		# %I 	Hour in 12-hour format 	05
+		# %M 	Minutes 	35
+		# %p 	AM or PM 	
+		# %R 	Time in 24-hour format -no seconds 	17:45
+		# %r 	Time in 12-hour format 	09:15:36 AM
+		Write-Verbose "[$FunctionName]: $MiniTimeNow"
+		If ($MinuteMark -Or $MinuteMark -eq 0) {
+			Write-Verbose "[$FunctionName]: MinuteMark trigger frequency selected"
+			[string]$SchedTaskName = $SchedTaskName + "_MinMark"
+			If ((Get-Date -Minute $MinuteMark) -le (Get-Date)) {
+				#Write-Host "Next hour"
+				$DateTimeOnce = (Get-Date -Minute $MinuteMark -Second 0) + (New-TimeSpan -Hours 1)
+			} Else {
+				$DateTimeOnce = Get-Date -Minute $MinuteMark -Second 0
+			}
+			$MiniTime = "$(Get-Date -Date $DateTimeOnce -UFormat '%I:%M %p / %R')"
+			$DescripTypeRate = "at minute mark '$($MinuteMark)': $MiniTime, $DateTimeOnce"
+			$T = New-ScheduledTaskTrigger -Once -At $DateTimeOnce
+		} ElseIf ($MinutesFromNow) {
+			Write-Verbose "[$FunctionName]: MinutesFromNow trigger frequency selected"
+			[string]$SchedTaskName = $SchedTaskName + "_MinsFromNow"
+			$DateTimeOnce = (Get-Date -Second 0) + (New-TimeSpan -Minutes $MinutesFromNow)
+			$MiniTime = "$(Get-Date -Date $DateTimeOnce -UFormat '%I:%M %p / %R')"
+			$DescripTypeRate = "$MinutesFromNow minutes from $($MiniTimeNow) at $($MiniTime): $DateTimeOnce"
+			$T = New-ScheduledTaskTrigger -Once -At $DateTimeOnce
+		} ElseIf ($DateTimeOnce) {
+			Write-Verbose "[$FunctionName]: DateTimeOnce trigger frequency selected"
+			$MiniTime = "$(Get-Date -Date $DateTimeOnce -Second 0 -UFormat '%I:%M %p / %R')"
+			If ($RepeatInterval) {
+				[string]$SchedTaskName = $SchedTaskName + "_OnceRepeat"
+				$DescripTypeRate = "once every $($RepeatInterval.ToString()) starting at $MiniTime, $DateTimeOnce"
+				$T = New-ScheduledTaskTrigger -Once -RepetitionInterval $RepeatInterval -At $DateTimeOnce
+			} Else {
+				[string]$SchedTaskName = $SchedTaskName + "_Once"
+				$DescripTypeRate = "once at $MiniTime, $DateTimeOnce"
+				$T = New-ScheduledTaskTrigger -Once -At $DateTimeOnce
+			}
+		} ElseIf ($DateTimeDaily) {
+			Write-Verbose "[$FunctionName]: DateTimeOnce trigger frequency selected"
+			$MiniTime = "$(Get-Date -Date $DateTimeDaily -Second 0 -UFormat '%I:%M %p / %R')"
+			If ($DaysInterval) {
+				[string]$SchedTaskName = $SchedTaskName + "_DaysRepeat"
+				$DescripTypeRate = "every $DaysInterval days at $MiniTime, starting $DateTimeDaily"
+				$T = New-ScheduledTaskTrigger -Daily -DaysInterval $DaysInterval -At $DateTimeDaily
+			} Else {
+				[string]$SchedTaskName = $SchedTaskName + "_Daily"
+				$DescripTypeRate = "daily at $MiniTime, starting $DateTimeDaily"
+				$T = New-ScheduledTaskTrigger -Daily -At $DateTimeDaily
+			}
+		} Else {
+			Write-Warning "[$FunctionName]: No Scheduled Task Trigger defined -MinuteMark, -MinutesFromNow, -DateTimeOnce, -DateTimeDaily"
+		}
+		Write-Verbose "[$FunctionName]: '$DescripTypeRate'"
+		Write-Verbose "[$FunctionName]: -At $DateTimeOnce"
+		$SchedDescription = "Reboot Valheim server $DescripTypeRate`nAuto-scheduled on: $(Get-Date)"
+		
+		# Scheduled Action:
+		#$FilePath = "<filename>.ps1"
+		$FilePath = $ScriptPath
+		$ScriptArgs = "-RestartServer -SchedTaskName `"$SchedTaskName`" -SchedTaskPath `"$SchedTaskPath`" -ServerStartupScript `"$ServerStartupScript`" -SecondsBuffer $SecondsBuffer"
+		If ($VerbosePreference -ne 'SilentlyContinue') {$ScriptArgs += " -Verbose"}
+		If ($DebugPreference -ne 'SilentlyContinue') {$ScriptArgs += " -Debug"}
+		If ([bool]$WhatIfPreference) {$ScriptArgs += " -WhatIf"}
+		If ($Confirm) {$ScriptArgs += " -Confirm"}
+		Write-Verbose "[$FunctionName]: $ScriptArgs"
+		#-File
+		#	Runs the specified script in the local scope ("dot-sourced"), so that the
+		#	functions and variables that the script creates are available in the
+		#	current session. Enter the script file path and any parameters.
+		#	File must be the last parameter in the command, because all characters
+		#	typed after the File parameter name are interpreted
+		#	as the script file path followed by the script parameters.
+		#$ScriptExecution = "Powershell.exe -file `"$FilePath`" $ScriptArgs"
+		$ScriptExecution = "-NoLogo -ExecutionPolicy Bypass -NoProfile -NonInteractive -File `"$FilePath`" $ScriptArgs"
+		#-Command
+		#	Executes the specified commands (and any parameters) as though they were
+		#	typed at the Windows PowerShell command prompt, and then exits, unless
+		#	NoExit is specified. The value of Command can be "-", a string. or a
+		#	script block.
+		#	
+		#	If the value of Command is "-", the command text is read from standard
+		#	input.
+		#	
+		#	If the value of Command is a script block, the script block must be enclosed
+		#	in braces ({}). You can specify a script block only when running PowerShell.exe
+		#	in Windows PowerShell. The results of the script block are returned to the
+		#	parent shell as deserialized XML objects, not live objects.
+		#	
+		#	If the value of Command is a string, Command must be the last parameter
+		#	in the command , because any characters typed after the command are
+		#	interpreted as the command arguments.
+		#	
+		#	To write a string that runs a Windows PowerShell command, use the format:
+		#		"& {<command>}"
+		#	where the quotation marks indicate a string and the invoke operator (&)
+		#	causes the command to be executed.
+		$CommandExecution = "-NoLogo -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command & {}"
+		Write-Verbose "[$FunctionName]: $ScriptExecution"
+		#$A = New-ScheduledTaskAction Execute $ScriptExecution
+		$A = New-ScheduledTaskAction -Execute "Powershell.exe" -WorkingDirectory $ScriptProjFolder -Argument $ScriptExecution
+		
+		#$P = "Contoso\Administrator"
+		#$Env:UserName
+		#$Env:UserDomain
+		#$Env:ComputerName
+		#$P = $Env:UserDomain + "\" + $Env:UserName
+		If ($RunAsSystemServiceAccount) {
+			#https://stackoverflow.com/questions/13965997/powershell-set-a-scheduled-task-to-run-when-user-isnt-logged-in
+			$P = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+		} Else {
+			If ($RunWithHighestPrivileges) {
+				#https://stackoverflow.com/questions/13965997/powershell-set-a-scheduled-task-to-run-when-user-isnt-logged-in
+				$P = New-ScheduledTaskPrincipal -UserId $Env:UserName -RunLevel Highest -LogonType Password 
+				$UserCredential = Get-Credential -UserName $Env:UserName -Message "User password required for "
+				$Password = $UserCredential.GetNetworkCredential().Password 
+			} Else {
+				$P = New-ScheduledTaskPrincipal -UserId $Env:UserName
+			}
+		}
+		
+		$S = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -Compatibility At
+		
+		# Check if task already exists:
+		#$SchedTaskName = "Restart Server_MinMark"
+		#$SchedTaskPath = "Valheim Server"
+		If ((Get-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" -ErrorAction SilentlyContinue)) {
+			Write-Warning "Task already exists: `"$SchedTaskName`""
+			Write-Host "Warning: Removing old task \$SchedTaskPath\$SchedTaskName" -BackgroundColor Black -ForegroundColor Red
+			# # $PSCmdlet.ShouldProcess('TARGET')
+			# What if: Performing the operation "FUNCTION_NAME" on target "TARGET".
+			# ## $PSCmdlet.ShouldProcess('TARGET','OPERATION')
+			# What if: Performing the operation "OPERATION" on target "TARGET".
+			# ## $PSCmdlet.ShouldProcess('MESSAGE','TARGET','OPERATION')
+			# What if: MESSAGE
+			If ($PSCmdlet.ShouldProcess("-TaskName `"$SchedTaskName`" -TaskPath `"\$SchedTaskPath\`"",'Unregister-ScheduledTask')) {
+				#Unregister-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" -Confirm:$false
+			}
+			Unregister-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" -Confirm:$false
+			#Unregister-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" @RiskMitigationParameters
+		}
+		
+		Write-Host "Scheduling new Task: `"$SchedTaskName`" folder: `"$SchedTaskPath`""
+		#$A = New-ScheduledTaskAction Execute $ScriptExecution
+		#$T = New-ScheduledTaskTrigger -AtLogon
+		#$P = "Contoso\Administrator"
+		#$S = New-ScheduledTaskSettingsSet
+		#$D = New-ScheduledTask -Action $A -Principal $P -Trigger $T -Settings $S
+		#Register-ScheduledTask -User $Env:UserName
+		If ($RunAsSystemServiceAccount) {
+			Write-Verbose "[$FunctionName]: Scheduling as System Service Account"
+			#Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S
+			$CommandScript = {
+				Write-Host "Hello World!"
+				pause
+			}
+			
+			$global:globSchedTaskName = $SchedTaskName
+			$global:globSchedTaskPath = $SchedTaskPath
+			$global:globSchedDescription = $SchedDescription
+			$global:globA = $A
+			$global:globP = $P
+			$global:globT = $T
+			$global:globS = $S
+			$CommandScript = {
+				Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S
+				pause
+			}
+			###
+			$CommandScript = @"
+Register-ScheduledTask -TaskName `"$SchedTaskName`" -TaskPath `"$SchedTaskPath`" -Description `"$SchedDescription`" -Action `"$A`" -Principal `"$P`" -Trigger `"$T`" -Settings `"$S`"
+pause
+"@
+			###
+			$CommandScript = {
+				Register-ScheduledTask -TaskName $global:globSchedTaskName -TaskPath $global:globSchedTaskPath -Description $global:globSchedDescription -Action $global:globA -Principal $global:globP -Trigger $global:globT -Settings $global:globS
+				#pause
+			}
+			
+			# # $PSCmdlet.ShouldProcess('TARGET')
+			# What if: Performing the operation "FUNCTION_NAME" on target "TARGET".
+			# ## $PSCmdlet.ShouldProcess('TARGET','OPERATION')
+			# What if: Performing the operation "OPERATION" on target "TARGET".
+			# ## $PSCmdlet.ShouldProcess('MESSAGE','TARGET','OPERATION')
+			# What if: MESSAGE
+			If ($PSCmdlet.ShouldProcess("-Verb RunAs -Wait -ArgumentList `"-Command $CommandScript`"",'Start-Process powershell.exe')) {
+				#Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList "-Command $CommandScript"
+			}
+			Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList "-Command $CommandScript"
+		} Else { # / If ($RunAsSystemServiceAccount) 
+			If ($RunWithHighestPrivileges) {
+				Write-Verbose "[$FunctionName]: Scheduling task $SchedTaskName to run with highest privileges"
+				If ($PSCmdlet.ShouldProcess("-TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Trigger $T -Settings $S -User $Env:UserName -Password $Password -RunLevel Highest",'Register-ScheduledTask')) {
+					Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Trigger $T -Settings $S -User $Env:UserName -Password $Password -RunLevel Highest
+				}
+				#Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Trigger $T -Settings $S -User $Env:UserName -Password $Password -RunLevel Highest
+			} Else {
+				If ($PSCmdlet.ShouldProcess("-TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S ",'Register-ScheduledTask')) {
+					Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S 
+				}
+				#Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S 
+			}
+		} # / If/Else ($RunAsSystemServiceAccount) 
+		
+		#-----------------------------------------------------------------------------------------------------------------------
+		
+		
+		#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		Write-Verbose -Message "[$FunctionName]: Ending function"
+		Return
+	} # /End function Register-SchdTask
+	#-----------------------------------------------------------------------------------------------------------------------
+	#-----------------------------------------------------------------------------------------------------------------------
+	Write-Verbose -Message "[$FunctionName]: End sub functions"
+	Write-Verbose -Message "[$FunctionName]: Main timer method selection"
+	Register-SchdTask
+	Write-Verbose -Message "[$FunctionName]: Main timer method selection"
+	return
+	
+	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	
+	Write-Verbose -Message "[$FunctionName]: Main timer method selection"
+	
 	$Method = 0
 	switch ($Method) {
-		0 {
-			Write-Verbose "PowerShell Start-Sleep wait method:"
+		0 { # "PowerShell Start-Sleep wait method:"
+			Write-Verbose "[$FunctionName]: PowerShell Start-Sleep wait method:"
 			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 			
 			$RefreshRate = 1 # in seconds
@@ -711,6 +1014,11 @@ Function Start-SleepTimer {
 					Write-Verbose "Progress bar counter completed."
 					
 				}
+				1 {
+					Write-Verbose "Set method:"
+					
+					
+				}
 				Default {}
 			} # End switch ($CounterMetod)
 			
@@ -718,13 +1026,13 @@ Function Start-SleepTimer {
 			
 			#PAUSE
 			
-			Set-PowerState -Action $Action @SetPowerStateParams @CommonParameters
+			Set-PowerState -Action $Action @SetPowerStateParams @CommonParameters @RiskMitigationParameters
 			
 			#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 			
 		}
-		1 {
-			Write-Verbose "Using [Stopwatch] object method:"
+		1 { # "Using [Stopwatch] object method:"
+			Write-Verbose "[$FunctionName]: Using [Stopwatch] object method:"
 			#https://ephos.github.io/posts/2018-8-20-Timers
 			
 			#Create a Stopwatch
@@ -737,8 +1045,187 @@ Function Start-SleepTimer {
 			$stopWatch | Get-Member
 			
 		}
-		2 {
-			Write-Verbose "Scheduled Task method:"
+		2 { # "Scheduled Task method:"
+			Write-Verbose "[$FunctionName]: Scheduled Task method:"
+			#-----------------------------------------------------------------------------------------------------------------------
+			
+			Write-Verbose "[$ScriptName]: Scheduled Task method:"
+			
+			# Scheduled Trigger:
+			#$T = New-ScheduledTaskTrigger -Once [-RepetitionInterval <TimeSpan>] -At <DateTime>
+			#$T = New-ScheduledTaskTrigger -Daily [-DaysInterval <Int32>] -At <DateTime>
+			#$MiniTime = "$((Get-Date).Hour):$((Get-Date).Minute)"
+			$MiniTimeNow = "$(Get-Date -UFormat '%I:%M %p / %R')"
+			# %I 	Hour in 12-hour format 	05
+			# %M 	Minutes 	35
+			# %p 	AM or PM 	
+			# %R 	Time in 24-hour format -no seconds 	17:45
+			# %r 	Time in 12-hour format 	09:15:36 AM
+			If ($MinuteMark -Or $MinuteMark -eq 0) {
+				[string]$SchedTaskName = $SchedTaskName + "_MinMark"
+				If ((Get-Date -Minute $MinuteMark) -le (Get-Date)) {
+					#Write-Host "Next hour"
+					$DateTimeOnce = (Get-Date -Minute $MinuteMark -Second 0) + (New-TimeSpan -Hours 1)
+				} Else {
+					$DateTimeOnce = Get-Date -Minute $MinuteMark -Second 0
+				}
+				$MiniTime = "$(Get-Date -Date $DateTimeOnce -UFormat '%I:%M %p / %R')"
+				$DescripTypeRate = "at minute mark '$($MinuteMark)': $MiniTime, $DateTimeOnce"
+				$T = New-ScheduledTaskTrigger -Once -At $DateTimeOnce
+			} ElseIf ($MinutesFromNow) {
+				[string]$SchedTaskName = $SchedTaskName + "_MinsFromNow"
+				$DateTimeOnce = (Get-Date -Second 0) + (New-TimeSpan -Minutes $MinutesFromNow)
+				$MiniTime = "$(Get-Date -Date $DateTimeOnce -UFormat '%I:%M %p / %R')"
+				$DescripTypeRate = "$MinutesFromNow minutes from $($MiniTimeNow) at $($MiniTime): $DateTimeOnce"
+				$T = New-ScheduledTaskTrigger -Once -At $DateTimeOnce
+			} ElseIf ($DateTimeOnce) {
+				$MiniTime = "$(Get-Date -Date $DateTimeOnce -Second 0 -UFormat '%I:%M %p / %R')"
+				If ($RepeatInterval) {
+					[string]$SchedTaskName = $SchedTaskName + "_OnceRepeat"
+					$DescripTypeRate = "once every $($RepeatInterval.ToString()) starting at $MiniTime, $DateTimeOnce"
+					$T = New-ScheduledTaskTrigger -Once -RepetitionInterval $RepeatInterval -At $DateTimeOnce
+				} Else {
+					[string]$SchedTaskName = $SchedTaskName + "_Once"
+					$DescripTypeRate = "once at $MiniTime, $DateTimeOnce"
+					$T = New-ScheduledTaskTrigger -Once -At $DateTimeOnce
+				}
+			} ElseIf ($DateTimeDaily) {
+				$MiniTime = "$(Get-Date -Date $DateTimeDaily -Second 0 -UFormat '%I:%M %p / %R')"
+				If ($DaysInterval) {
+					[string]$SchedTaskName = $SchedTaskName + "_DaysRepeat"
+					$DescripTypeRate = "every $DaysInterval days at $MiniTime, starting $DateTimeDaily"
+					$T = New-ScheduledTaskTrigger -Daily -DaysInterval $DaysInterval -At $DateTimeDaily
+				} Else {
+					[string]$SchedTaskName = $SchedTaskName + "_Daily"
+					$DescripTypeRate = "daily at $MiniTime, starting $DateTimeDaily"
+					$T = New-ScheduledTaskTrigger -Daily -At $DateTimeDaily
+				}
+			} Else {
+				Write-Warning "No Scheduled Task Trigger defined -MinuteMark, -MinutesFromNow, -DateTimeOnce, -DateTimeDaily"
+			}
+			$SchedDescription = "Reboot Valheim server $DescripTypeRate`nAuto-scheduled on: $(Get-Date)"
+			
+			# Scheduled Action:
+			#$FilePath = "<filename>.ps1"
+			$FilePath = $ScriptPath
+			If ($ShutDown) {
+				$ScriptArgs = "-RestartServer -SchedTaskName `"$SchedTaskName`" -SchedTaskPath `"$SchedTaskPath`" -ServerStartupScript `"$ServerStartupScript`" -SecondsBuffer $SecondsBuffer -ShutDown"
+			} Else {
+				$ScriptArgs = "-RestartServer -SchedTaskName `"$SchedTaskName`" -SchedTaskPath `"$SchedTaskPath`" -ServerStartupScript `"$ServerStartupScript`" -SecondsBuffer $SecondsBuffer"
+			}
+			If ($VerbosePreference -ne 'SilentlyContinue') {$ScriptArgs += " -Verbose"}
+			If ($DebugPreference -ne 'SilentlyContinue') {$ScriptArgs += " -Debug"}
+			If ([bool]$WhatIfPreference) {$ScriptArgs += " -WhatIf"}
+			If ($Confirm) {$ScriptArgs += " -Confirm"}
+			#$ScriptExecution = "Powershell.exe -file `"$FilePath`" $ScriptArgs"
+			$ScriptExecution = "-NoLogo -ExecutionPolicy Bypass -NoProfile -NonInteractive -File `"$FilePath`" $ScriptArgs"
+			#$A = New-ScheduledTaskAction Execute $ScriptExecution
+			$A = New-ScheduledTaskAction -Execute "Powershell.exe" -Argument $ScriptExecution -WorkingDirectory $ScriptProjFolder
+			
+			#$P = "Contoso\Administrator"
+			#$Env:UserName
+			#$Env:UserDomain
+			#$Env:ComputerName
+			#$P = $Env:UserDomain + "\" + $Env:UserName
+			If ($RunAsSystemServiceAccount) {
+				#https://stackoverflow.com/questions/13965997/powershell-set-a-scheduled-task-to-run-when-user-isnt-logged-in
+				$P = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+			} Else {
+				If ($RunWithHighestPrivileges) {
+					#https://stackoverflow.com/questions/13965997/powershell-set-a-scheduled-task-to-run-when-user-isnt-logged-in
+					$P = New-ScheduledTaskPrincipal -UserId $Env:UserName -RunLevel Highest -LogonType Password 
+					$UserCredential = Get-Credential -UserName $Env:UserName -Message "User password required for "
+					$Password = $UserCredential.GetNetworkCredential().Password 
+				} Else {
+					$P = New-ScheduledTaskPrincipal -UserId $Env:UserName
+				}
+			}
+			
+			$S = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -Compatibility At
+			
+			# Check if task already exists:
+			#$SchedTaskName = "Restart Server_MinMark"
+			#$SchedTaskPath = "Valheim Server"
+			If ((Get-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" -ErrorAction SilentlyContinue)) {
+				Write-Warning "Task already exists: `"$SchedTaskName`""
+				Write-Host "Warning: Removing old task \$SchedTaskPath\$SchedTaskName" -BackgroundColor Black -ForegroundColor Red
+				# # $PSCmdlet.ShouldProcess('TARGET')
+				# What if: Performing the operation "FUNCTION_NAME" on target "TARGET".
+				# ## $PSCmdlet.ShouldProcess('TARGET','OPERATION')
+				# What if: Performing the operation "OPERATION" on target "TARGET".
+				# ## $PSCmdlet.ShouldProcess('MESSAGE','TARGET','OPERATION')
+				# What if: MESSAGE
+				If ($PSCmdlet.ShouldProcess("-TaskName `"$SchedTaskName`" -TaskPath `"\$SchedTaskPath\`"",'Unregister-ScheduledTask')) {
+					#Unregister-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" -Confirm:$false
+				}
+				Unregister-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" -Confirm:$false
+				#Unregister-ScheduledTask -TaskName "$SchedTaskName" -TaskPath "\$SchedTaskPath\" @RiskMitigationParameters
+			}
+			
+			Write-Host "Scheduling new Task: `"$SchedTaskName`" folder: `"$SchedTaskPath`""
+			#$A = New-ScheduledTaskAction Execute $ScriptExecution
+			#$T = New-ScheduledTaskTrigger -AtLogon
+			#$P = "Contoso\Administrator"
+			#$S = New-ScheduledTaskSettingsSet
+			#$D = New-ScheduledTask -Action $A -Principal $P -Trigger $T -Settings $S
+			#Register-ScheduledTask -User $Env:UserName
+			If ($RunAsSystemServiceAccount) {
+				Write-Verbose "Scheduling as System Service Account"
+				#Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S
+				$CommandScript = {
+					Write-Host "Hello World!"
+					pause
+				}
+				
+				$global:globSchedTaskName = $SchedTaskName
+				$global:globSchedTaskPath = $SchedTaskPath
+				$global:globSchedDescription = $SchedDescription
+				$global:globA = $A
+				$global:globP = $P
+				$global:globT = $T
+				$global:globS = $S
+				$CommandScript = {
+					Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S
+					pause
+				}
+				###
+				$CommandScript = @"
+Register-ScheduledTask -TaskName `"$SchedTaskName`" -TaskPath `"$SchedTaskPath`" -Description `"$SchedDescription`" -Action `"$A`" -Principal `"$P`" -Trigger `"$T`" -Settings `"$S`"
+pause
+"@
+				###
+				$CommandScript = {
+					Register-ScheduledTask -TaskName $global:globSchedTaskName -TaskPath $global:globSchedTaskPath -Description $global:globSchedDescription -Action $global:globA -Principal $global:globP -Trigger $global:globT -Settings $global:globS
+					#pause
+				}
+				
+				# # $PSCmdlet.ShouldProcess('TARGET')
+				# What if: Performing the operation "FUNCTION_NAME" on target "TARGET".
+				# ## $PSCmdlet.ShouldProcess('TARGET','OPERATION')
+				# What if: Performing the operation "OPERATION" on target "TARGET".
+				# ## $PSCmdlet.ShouldProcess('MESSAGE','TARGET','OPERATION')
+				# What if: MESSAGE
+				If ($PSCmdlet.ShouldProcess("-Verb RunAs -Wait -ArgumentList `"-Command $CommandScript`"",'Start-Process powershell.exe')) {
+					#Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList "-Command $CommandScript"
+				}
+				Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList "-Command $CommandScript"
+			} Else { # / If ($RunAsSystemServiceAccount) 
+				If ($RunWithHighestPrivileges) {
+					Write-Verbose "Scheduling task $SchedTaskName to run with highest privileges"
+					If ($PSCmdlet.ShouldProcess("-TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Trigger $T -Settings $S -User $Env:UserName -Password $Password -RunLevel Highest",'Register-ScheduledTask')) {
+						#Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Trigger $T -Settings $S -User $Env:UserName -Password $Password -RunLevel Highest
+					}
+					Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Trigger $T -Settings $S -User $Env:UserName -Password $Password -RunLevel Highest
+				} Else {
+					If ($PSCmdlet.ShouldProcess("-TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S ",'Register-ScheduledTask')) {
+						#Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S 
+					}
+					Register-ScheduledTask -TaskName $SchedTaskName -TaskPath $SchedTaskPath -Description $SchedDescription -Action $A -Principal $P -Trigger $T -Settings $S 
+				}
+			} # / If/Else ($RunAsSystemServiceAccount) 
+			
+			#-----------------------------------------------------------------------------------------------------------------------
+			
 			
 		}
 		Default {
@@ -752,12 +1239,8 @@ Function Start-SleepTimer {
 } # End of Start-SleepTimer function.
 Set-Alias -Name 'Set-SleepTimer' -Value 'Start-SleepTimer'
 #-----------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
+Start-SleepTimer -Minutes 1 -Action 'sleep' -WhatIf
+Return
 
 #-----------------------------------------------------------------------------------------------------------------------
 Function Stop-SleepTimer {
@@ -802,63 +1285,9 @@ Set-Alias -Name 'Reset-SleepTimer' -Value 'Stop-SleepTimer'
 Set-Alias -Name 'Disable-SleepTimer' -Value 'Stop-SleepTimer'
 #-----------------------------------------------------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------------------------------------------------
+Write-Verbose -Message "[$ScriptName]: End loading Functions"
 # [/Functions]----------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-#-----------------------------------------------------------------------------------------------------------------------
-Function New-TaskTrackingInitiativeTEST {
-	<#
-	.SYNOPSIS
-	Single-line summary.
-	.DESCRIPTION
-	Multiple paragraphs describing in more detail what the function is, what it does, how it works, inputs it expects, and outputs it creates.
-	.NOTES
-	Some extra info about this function, like it's origins, what module (if any) it's apart of, and where it's from.
-	
-	Maybe some original author credits as well.
-	#>
-	[Alias("New-ProjectInitTEST")]
-	#Requires -Version 3
-	#[CmdletBinding()]
-	[CmdletBinding(DefaultParameterSetName = 'None')]
-	Param(
-		[Parameter(Mandatory = $True, Position = 0, 
-		           ValueFromPipeline = $True, 
-		           ValueFromPipelineByPropertyName = $True, 
-		           HelpMessage = "Path to ...", 
-		           ParameterSetName = "Path")]
-		[ValidateNotNullOrEmpty()]
-		[ValidateSet("default", "powershell.exe", "Code.exe", "VSCodium.exe")]
-		[Alias('ProjectPath','p')]
-		[String]$Path
-		
-	)
-	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	$CommonParameters = @{
-		Verbose = [System.Management.Automation.ActionPreference]$VerbosePreference
-		Debug = [System.Management.Automation.ActionPreference]$DebugPreference
-	}
-	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	
-	
-	
-	#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	Return
-} # End of New-TaskTrackingInitiativeTEST function.
-Set-Alias -Name 'New-ProjectInitTEST' -Value 'New-TaskTrackingInitiativeTEST'
-#-----------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Define functions:
@@ -1132,7 +1561,7 @@ function Register-ServerRestart {
 	
 	# Scheduled Action:
 	#$FilePath = "<filename>.ps1"
-	$FilePath = $MyExecutingScript
+	$FilePath = $ScriptPath
 	If ($ShutDown) {
 		$ScriptArgs = "-RestartServer -SchedTaskName `"$SchedTaskName`" -SchedTaskPath `"$SchedTaskPath`" -ServerStartupScript `"$ServerStartupScript`" -SecondsBuffer $SecondsBuffer -ShutDown"
 	} Else {
@@ -1578,25 +2007,6 @@ function Restart-ValheimServer {
 	Return
 } # / function Restart-ValheimServer
 
-#Pause
-#Return
-
-<#
-$ValheimDataFolder = "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim"
-$AdminList = Join-Path -Path $ValheimDataFolder -ChildPath "adminlist.txt"
-$BannedList = Join-Path -Path $ValheimDataFolder -ChildPath "bannedlist.txt"
-$PermittedList = Join-Path -Path $ValheimDataFolder -ChildPath "permittedlist.txt"
-$ValheimSavesFolder = Join-Path -Path $ValheimDataFolder -ChildPath "worlds_local"
-$ValheimBackupSavesFolder = Join-Path -Path $ValheimSavesFolder -ChildPath "$($WorldName)_backups"
-$MainSaveFileDb = Join-Path -Path $ValheimSavesFolder -ChildPath "$WorldName.db"
-$MainSaveFileFwl = Join-Path -Path $ValheimSavesFolder -ChildPath "$WorldName.fwl"
-
-$WorldName = "SpeedRun"
-
-
-Get-WorldSaveFiles -ValheimSavesFolder $ValheimSavesFolder -ValheimBackupSavesFolder $ValheimBackupSavesFolder -WorldName $WorldName -ManualSaveTag $ManualSaveTag -MainSaveFileDb $MainSaveFileDb -MainSaveFileFwl $MainSaveFileFwl
-#>
-
 Function Format-FileSize {
 	[CmdletBinding()]
 	Param (
@@ -1928,9 +2338,48 @@ Function ConvertTo-VtColorString {
 } # End of ConvertTo-VtColorString function.
 #-----------------------------------------------------------------------------------------------------------------------
 
-Write-Verbose -Message "[$ScriptName]: Finished loading Functions"
+$newSampleModuleParameters = @{
+    DestinationPath   = 'C:\Users\G\Documents\GitHub\SleepTimerTest'
+    ModuleType        = 'CompleteSample'
+    ModuleName        = 'SleepTimerTest'
+    ModuleAuthor      = 'My Name'
+    ModuleDescription = 'MyCompleteSample Description'
+}
 
-Write-Verbose -Message "[$ScriptName]: Executing main script logic"
+$newSampleModuleParameters = @{
+    DestinationPath   = 'C:\Users\G\Documents\GitHub\SleepTimerTest'
+    ModuleType        = 'SimpleModule'
+    ModuleName        = 'SleepTimerPoSh'
+    ModuleAuthor      = 'Kerbalnut'
+    ModuleDescription = "PowerShell module for Sleep Timer functions to change computer's power state to sleep/hibernate/shutdown/restart"
+}
+
+New-SampleModule @newSampleModuleParameters
+
+
+
+
+#Set-PowerState -Action Sleep @CommonParameters #@RiskMitigationParameters
+#Set-PowerState -Action Sleep @CommonParameters -WhatIf #@RiskMitigationParameters
+#-WhatIf 
+#return
+#exit
+
+
+#powershell.exe -File "C:\Users\G\Documents\GitHub\PowerShell-template\04 Module Template\ModuleTemplate\Start-SleepTimer.ps1"
+
+
+#$ScriptExecution = "Powershell.exe -file `"$FilePath`" $ScriptArgs"
+#$ScriptExecution = "-NoLogo -ExecutionPolicy Bypass -NoProfile -NonInteractive -File `"$FilePath`" $ScriptArgs"
+#$A = New-ScheduledTaskAction Execute $ScriptExecution
+#$A = New-ScheduledTaskAction -Execute "Powershell.exe" -Argument $ScriptExecution -WorkingDirectory $ScriptProjFolder
+
+
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+# [Main:]---------------------------------------------------------------------------------------------------------------
+Write-Verbose -Message "[$ScriptName]: Starting main script logic"
 
 If ($SetPower) {
 	Write-Verbose -Message "[$ScriptName]: Activating Power state command"
@@ -1941,5 +2390,9 @@ If ($SetPower) {
 	Set-PowerState -Action $Action @PowerStateParams @CommonParameters @RiskMitigationParameters
 }
 
+
+Write-Verbose -Message "[$ScriptName]: End of script file."
+# [/Main]---------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
 
 
